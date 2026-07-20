@@ -1,0 +1,20 @@
+# Secrets — never commit environment files
+.env
+.env.*
+*.env
+
+# Dependencies
+node_modules/
+
+# Expo / build output
+.expo/
+dist/
+web-build/
+*.hbc
+
+# Local upload storage (Cloudinary is the real store)
+backend/uploads/
+
+# OS / editor
+.DS_Store
+*.log

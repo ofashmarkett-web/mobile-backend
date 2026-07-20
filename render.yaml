@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: ofash-markett-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      # Keep "development" until the Resend domain is verified — production
+      # mode hard-fails signup when the OTP email can't be delivered, while
+      # development logs the OTP to the Render logs instead.
+      - key: NODE_ENV
+        value: development
+      - key: DB_SYNC
+        value: "true"
+      - key: DB_SSL
+        value: "true"
+      - key: KYC_MODE
+        value: simulation
+      - key: VENDOR_VERIFICATION_ENFORCED
+        value: "false"
+      # Paste these secret values in the Render dashboard (never in git):
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: DOJAH_ENV
+        sync: false
+      - key: DOJAH_TEST_APP_ID
+        sync: false
+      - key: DOJAH_TEST_SECRET_KEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
