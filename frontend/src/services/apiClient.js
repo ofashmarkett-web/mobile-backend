@@ -148,7 +148,8 @@ export const orderApi = {
   get: (token, id) => request(`/orders/${id}`, { token }),
   accept: (token, id) => request(`/orders/${id}/accept`, { method: "POST", token }),
   decline: (token, id) => request(`/orders/${id}/decline`, { method: "POST", token }),
-  ready: (token, id) => request(`/orders/${id}/ready`, { method: "POST", token }),
+  ready: (token, id, payload) =>
+    request(`/orders/${id}/ready`, { method: "POST", token, body: payload }),
   cancelReady: (token, id) => request(`/orders/${id}/cancel-ready`, { method: "POST", token }),
 };
 

@@ -5,13 +5,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS } from "../../theme/colors";
-import { orderApi } from "../../services/apiClient";
+import { orderApi, vendorApi } from "../../services/apiClient";
 import { useUserStore } from "../../store/userStore";
 import { useFetch } from "../../hooks/useFetch";
 import ProductThumb from "../../components/vendor/ProductThumb";
@@ -104,6 +105,72 @@ const CHECKLIST = (orderNo) => [
   },
 ];
 
+// Pickup-address sheets (module scope — defining these inside the screen would
+// remount the TextInput on every keystroke and close the keyboard).
+
+const PickupSheetHeader = ({ title, subtitle }) => (
+  <>
+    <View style={styles.pickupIconWrap}>
+      <Ionicons name="navigate" size={28} color={COLORS.teal} />
+    </View>
+    <Text style={styles.pickupSheetTitle}>{title}</Text>
+    <Text style={styles.pickupSheetSub}>{subtitle}</Text>
+  </>
+);
+
+// Sheet A — confirm the pickup address before the rider is notified.
+const PickupAddressSheet = ({ address, busy, onProceed, onChangeAddress }) => (
+  <>
+    <PickupSheetHeader
+      title="Pickup address"
+      subtitle="Confirm this before we notify the rider."
+    />
+    <View style={styles.pickupAddressRow}>
+      <Ionicons name="navigate-outline" size={16} color={COLORS.teal} />
+      <Text style={styles.pickupAddressText}>{address || "No pickup address set yet"}</Text>
+    </View>
+    <PrimaryButton label="Proceed" loading={busy} disabled={!address} onPress={onProceed} />
+    <PrimaryButton
+      label="Change pickup address"
+      variant="outline"
+      style={{ marginTop: 10 }}
+      onPress={onChangeAddress}
+    />
+  </>
+);
+
+// Sheet B — enter a different pickup address for this order.
+const ChangePickupAddressSheet = ({ draft, onDraftChange, onBack, onSave }) => (
+  <>
+    <PickupSheetHeader
+      title="Change pickup address"
+      subtitle="Where should the rider come to pick up this order?"
+    />
+    <View style={styles.pickupDashedBox}>
+      <View style={styles.pickupFieldBox}>
+        <Text style={styles.pickupFieldLabel}>PICKUP ADDRESS</Text>
+        <TextInput
+          style={styles.pickupFieldInput}
+          value={draft}
+          onChangeText={onDraftChange}
+          placeholder="Enter your new pickup address"
+          placeholderTextColor={COLORS.muted}
+          multiline
+        />
+      </View>
+    </View>
+    <View style={styles.footerRow}>
+      <PrimaryButton label="Go back" variant="outline" style={{ flex: 1 }} onPress={onBack} />
+      <PrimaryButton
+        label="Save address"
+        style={{ flex: 1 }}
+        disabled={!draft.trim()}
+        onPress={onSave}
+      />
+    </View>
+  </>
+);
+
 // Live countdown to escrow auto-release (mockup: "05 : 27 hrs mins").
 const useCountdown = (target) => {
   const [now, setNow] = useState(Date.now());
@@ -133,7 +200,27 @@ const VendorOrderDetailScreen = ({ navigation, route }) => {
   const [showChecklist, setShowChecklist] = useState(false);
   const [checked, setChecked] = useState({});
   const [showRiderSheet, setShowRiderSheet] = useState(false);
+  // null | "confirm" (Sheet A) | "edit" (Sheet B)
+  const [addressSheet, setAddressSheet] = useState(null);
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [storeAddress, setStoreAddress] = useState("");
+  const [draftAddress, setDraftAddress] = useState("");
   const countdown = useCountdown(order?.status === "delivered" ? order.autoReleaseAt : null);
+
+  // Fetch the store address once — it's the default pickup point when the
+  // order has no per-order pickup address yet.
+  useEffect(() => {
+    let active = true;
+    vendorApi
+      .store(token)
+      .then((result) => {
+        if (active) setStoreAddress(result.store?.address || "");
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (countdown?.done) detail.refresh();
@@ -166,6 +253,7 @@ const VendorOrderDetailScreen = ({ navigation, route }) => {
   }
 
   const banner = BANNERS[order.status] || BANNERS.pending;
+  const currentPickupAddress = pickupAddress || order.pickupAddress || storeAddress;
   const meta = ORDER_STATUS_META[order.status] || ORDER_STATUS_META.pending;
   const allChecked = CHECKLIST(order.orderNo).every((item) => checked[item.key]);
   const showSteps = ["ready_for_pickup", "shipped", "delivered", "completed"].includes(
@@ -396,18 +484,47 @@ const VendorOrderDetailScreen = ({ navigation, route }) => {
             label="Ready for pickup"
             style={{ flex: 1 }}
             disabled={!allChecked}
-            loading={busy}
-            onPress={() =>
+            onPress={() => {
+              // The rider is only notified after the vendor confirms the
+              // pickup address on the next sheet.
+              setShowChecklist(false);
+              setAddressSheet("confirm");
+            }}
+          />
+        </View>
+      </BottomSheet>
+
+      {/* Pickup address confirmation (Sheet A) / change (Sheet B) */}
+      <BottomSheet visible={addressSheet !== null} onClose={() => setAddressSheet(null)}>
+        {addressSheet === "edit" ? (
+          <ChangePickupAddressSheet
+            draft={draftAddress}
+            onDraftChange={setDraftAddress}
+            onBack={() => setAddressSheet("confirm")}
+            onSave={() => {
+              setPickupAddress(draftAddress.trim());
+              setAddressSheet("confirm");
+            }}
+          />
+        ) : (
+          <PickupAddressSheet
+            address={currentPickupAddress}
+            busy={busy}
+            onProceed={() =>
               act(
-                () => orderApi.ready(token, order.id),
+                () => orderApi.ready(token, order.id, { pickupAddress: currentPickupAddress }),
                 () => {
-                  setShowChecklist(false);
+                  setAddressSheet(null);
                   setShowRiderSheet(true);
                 },
               )
             }
+            onChangeAddress={() => {
+              setDraftAddress("");
+              setAddressSheet("edit");
+            }}
           />
-        </View>
+        )}
       </BottomSheet>
 
       {/* Finding a rider + pickup code */}
@@ -723,6 +840,80 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: COLORS.muted,
     marginTop: 2,
+  },
+  pickupIconWrap: {
+    alignSelf: "center",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.tealSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  pickupSheetTitle: {
+    fontSize: 16.5,
+    fontWeight: "800",
+    color: COLORS.ink,
+    textAlign: "center",
+  },
+  pickupSheetSub: {
+    fontSize: 12,
+    color: COLORS.muted,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 16,
+    lineHeight: 17,
+  },
+  pickupAddressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  pickupAddressText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.ink,
+    lineHeight: 18,
+  },
+  pickupDashedBox: {
+    borderWidth: 1.2,
+    borderStyle: "dashed",
+    borderColor: COLORS.line,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+  },
+  pickupFieldBox: {
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  pickupFieldLabel: {
+    fontSize: 9,
+    letterSpacing: 1.1,
+    color: COLORS.muted,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  pickupFieldInput: {
+    fontSize: 13.5,
+    color: COLORS.ink,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
+    minHeight: 52,
+    textAlignVertical: "top",
   },
   riderIconWrap: {
     alignSelf: "center",

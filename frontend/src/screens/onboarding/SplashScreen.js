@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Image, StyleSheet, Text, View } from "react-native";
+import { Alert, Animated, Image, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserStore } from "../../store/userStore";
 import { resolveRoleLanding } from "../../services/apiClient";
 import { COLORS } from "../../theme/colors";
+import { IS_RIDER_APP } from "../../config/appVariant";
 
 const STEPS = [
   { key: "logo" },
@@ -26,6 +27,7 @@ const STEP_DURATION_MS = 7000;
 
 const SplashScreen = ({ navigation }) => {
   const hydrateSession = useUserStore((state) => state.hydrateSession);
+  const resetUser = useUserStore((state) => state.resetUser);
   const [step, setStep] = useState(0);
   const opacity = useRef(new Animated.Value(0)).current;
   const routedRef = useRef(false);
@@ -37,6 +39,25 @@ const SplashScreen = ({ navigation }) => {
     const session = await hydrateSession();
     const role = session?.user?.role;
     const parent = navigation.getParent?.();
+
+    // Each app variant only serves its own roles — a stored session for the
+    // wrong variant is signed out and sent back to Auth.
+    if (!IS_RIDER_APP && role === "rider") {
+      resetUser();
+      Alert.alert("Rider account", "Rider accounts use the O-Fash Rider app.");
+      parent?.replace("Auth");
+      return;
+    }
+
+    if (IS_RIDER_APP && (role === "buyer" || role === "vendor")) {
+      resetUser();
+      Alert.alert(
+        "O-Fash Rider",
+        "This is the O-Fash Rider app — use the main O-Fash Markett app to shop or sell.",
+      );
+      parent?.replace("Auth");
+      return;
+    }
 
     if (role === "vendor" || role === "rider") {
       // Land on the dashboard if onboarding is already submitted; otherwise

@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { authApi, onboardingApi, resolveRoleLanding } from "../../services/apiClient";
 import { useUserStore } from "../../store/userStore";
 import { COLORS } from "../../theme/colors";
+import { IS_RIDER_APP } from "../../config/appVariant";
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 45;
@@ -27,6 +28,7 @@ const formatCountdown = (totalSeconds) => {
 
 const OTPVerificationScreen = ({ navigation, route }) => {
   const setSession = useUserStore((state) => state.setSession);
+  const resetUser = useUserStore((state) => state.resetUser);
   const inputs = useRef([]);
   const [code, setCode] = useState(emptyCode());
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -74,6 +76,22 @@ const OTPVerificationScreen = ({ navigation, route }) => {
       if (isLogin) {
         const storedRole = session.user?.role;
         const parent = navigation.getParent?.();
+
+        // Each app variant only serves its own roles — wrong-app logins are
+        // signed out with a pointer to the right app.
+        if (!IS_RIDER_APP && storedRole === "rider") {
+          resetUser();
+          setError("Rider accounts use the O-Fash Rider app.");
+          return;
+        }
+
+        if (IS_RIDER_APP && storedRole !== "rider") {
+          resetUser();
+          setError(
+            "This is the O-Fash Rider app — use the main O-Fash Markett app to shop or sell.",
+          );
+          return;
+        }
 
         if (storedRole === "vendor" || storedRole === "rider") {
           // Returning users who finished onboarding go straight to their

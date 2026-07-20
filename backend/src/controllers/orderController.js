@@ -4,6 +4,7 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const User = require("../models/User");
 const BuyerProfile = require("../models/BuyerProfile");
+const VendorProfile = require("../models/VendorProfile");
 const Dispute = require("../models/Dispute");
 const { generateCode, generateUniqueOrderNo } = require("../utils/generateUniqueCode");
 
@@ -39,6 +40,7 @@ const serializeOrder = (order) => ({
   status: order.status,
   escrowStatus: order.escrowStatus,
   pickupCode: order.pickupCode,
+  pickupAddress: order.pickupAddress,
   deliveryAddress: order.deliveryAddress,
   buyerId: order.buyerId,
   buyerName:
@@ -275,11 +277,23 @@ const declineOrder = transition(["pending"], async (order, req) => {
 });
 
 // Vendor confirms the packing checklist; a pickup code is generated for the rider.
+// The vendor may confirm/override the pickup address the rider is sent to; if
+// none is provided we fall back to the vendor's store address.
 const markReadyForPickup = transition(["packaging"], async (order, req) => {
   requireVendorOwner(order, req);
+
+  let pickupAddress =
+    typeof req.body?.pickupAddress === "string" ? req.body.pickupAddress.trim() : "";
+
+  if (!pickupAddress) {
+    const profile = await VendorProfile.findOne({ where: { userId: req.user.id } });
+    pickupAddress = profile?.address || order.pickupAddress || null;
+  }
+
   await order.update({
     status: "ready_for_pickup",
     packedAt: new Date(),
+    pickupAddress,
     pickupCode: order.pickupCode || generateCode("OFM", 4),
   });
 });

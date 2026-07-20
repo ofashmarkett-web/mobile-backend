@@ -7,6 +7,7 @@ import AuthNavigator from "./AuthNavigator";
 import BuyerNavigator from "./BuyerNavigator";
 import VendorNavigator from "./VendorNavigator";
 import RiderNavigator from "./RiderNavigator";
+import { IS_RIDER_APP } from "../config/appVariant";
 
 const Stack = createNativeStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -22,9 +23,17 @@ const AppNavigator = () => {
     >
       <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
       <Stack.Screen name="Auth" component={AuthNavigator} />
-      <Stack.Screen name="Buyer" component={BuyerNavigator} />
-      <Stack.Screen name="Vendor" component={VendorNavigator} />
-      <Stack.Screen name="Rider" component={RiderNavigator} />
+      {IS_RIDER_APP ? (
+        // Rider app: rider screens only — no buyer/vendor surface at all.
+        <Stack.Screen name="Rider" component={RiderNavigator} />
+      ) : (
+        // Market app: buyer + vendor only — the Rider navigator is not
+        // registered, so rider screens are unreachable.
+        <>
+          <Stack.Screen name="Buyer" component={BuyerNavigator} />
+          <Stack.Screen name="Vendor" component={VendorNavigator} />
+        </>
+      )}
     </Stack.Navigator>
   );
 };

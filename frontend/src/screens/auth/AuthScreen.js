@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserStore } from "../../store/userStore";
 import { authApi } from "../../services/apiClient";
 import { COLORS } from "../../theme/colors";
+import { IS_RIDER_APP } from "../../config/appVariant";
 
 const segmentRoles = [
   { key: "buyer", label: "I'm here to shop" },
@@ -61,7 +62,8 @@ const AuthScreen = ({ navigation }) => {
   const [mode, setMode] = useState("register");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [role, setSelectedRole] = useState("buyer");
+  // The rider app signs up riders only; the market app starts on "buyer".
+  const [role, setSelectedRole] = useState(IS_RIDER_APP ? "rider" : "buyer");
   const [gender, setGender] = useState("");
   const [showReferral, setShowReferral] = useState(false);
   const [form, setForm] = useState({
@@ -212,7 +214,11 @@ const AuthScreen = ({ navigation }) => {
 
           <View style={styles.header}>
             <Text style={styles.title}>
-              {isRegister ? "Set up your account." : "Welcome back, Shopper"}
+              {isRegister
+                ? "Set up your account."
+                : IS_RIDER_APP
+                  ? "Welcome back, Rider"
+                  : "Welcome back, Shopper"}
             </Text>
             <Text style={styles.subtitle}>
               {isRegister
@@ -221,7 +227,7 @@ const AuthScreen = ({ navigation }) => {
             </Text>
           </View>
 
-          {isRegister ? (
+          {isRegister && !IS_RIDER_APP ? (
             <View style={styles.segment}>
               {segmentRoles.map((item) => (
                 <TouchableOpacity
@@ -240,10 +246,10 @@ const AuthScreen = ({ navigation }) => {
             </View>
           ) : null}
 
-          {isRegister && role === "rider" ? (
+          {isRegister && IS_RIDER_APP ? (
             <View style={styles.riderBadge}>
               <MaterialCommunityIcons name="moped" size={14} color={COLORS.teal} />
-              <Text style={styles.riderBadgeText}>Signing up as a rider</Text>
+              <Text style={styles.riderBadgeText}>Rider</Text>
             </View>
           ) : null}
 
@@ -366,23 +372,6 @@ const AuthScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
-          {isRegister ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => handleRoleChange(role === "rider" ? "buyer" : "rider")}
-              style={styles.footerLink}
-            >
-              <Text style={styles.footerLinkMuted}>
-                {role === "rider" ? (
-                  <Text style={styles.footerLinkStrong}>Switch back to shopping</Text>
-                ) : (
-                  <>
-                    Want to deliver? <Text style={styles.footerLinkStrong}>Become a rider</Text>
-                  </>
-                )}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
