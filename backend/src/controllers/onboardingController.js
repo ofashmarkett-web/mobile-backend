@@ -238,7 +238,9 @@ const getOnboardingStatus = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       onboardingStatus: profile.onboardingStatus,
-      kycStatus: profile.kycStatus,
+      // Buyer profiles have no KYC columns — report null rather than dropping
+      // the field so clients can rely on it being present.
+      kycStatus: profile.kycStatus || null,
       checks: {
         bvn: profile.bvnStatus,
         nin: profile.ninStatus,

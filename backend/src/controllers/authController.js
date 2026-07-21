@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { Resend } = require("resend");
 const User = require("../models/User");
+const BuyerProfile = require("../models/BuyerProfile");
+const VendorProfile = require("../models/VendorProfile");
 const { handleDojahOnboardingWebhook } = require("./onboardingController");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -223,9 +225,73 @@ const handleDojahWebhook = async (req, res, next) => {
   return handleDojahOnboardingWebhook(req, res, next);
 };
 
+// Explicit buyer↔vendor profile switch. On the first switch the target profile
+// is seeded from the one they already have, so the app recognises who they are
+// on the other side. Buyers get an active profile straight away (no approval
+// gate); a new vendor profile stays a draft — vendor onboarding/KYC still applies.
+const switchRoleHandler = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    const user = req.user;
+
+    if (!["buyer", "vendor"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Role must be buyer or vendor" });
+    }
+
+    if (user.role === "rider") {
+      return res.status(403).json({ success: false, message: "Rider accounts can't switch profiles." });
+    }
+
+    const emailName = user.email.split("@")[0];
+
+    if (role === "buyer") {
+      const buyerProfile = await BuyerProfile.findOne({ where: { userId: user.id } });
+
+      if (!buyerProfile) {
+        const vendorProfile = await VendorProfile.findOne({ where: { userId: user.id } });
+
+        await BuyerProfile.create({
+          userId: user.id,
+          fullName: vendorProfile?.fullName || vendorProfile?.businessName || emailName,
+          defaultAddress: vendorProfile?.address || null,
+          onboardingStatus: "active",
+        });
+      }
+    } else {
+      const vendorProfile = await VendorProfile.findOne({ where: { userId: user.id } });
+
+      if (!vendorProfile) {
+        const buyerProfile = await BuyerProfile.findOne({ where: { userId: user.id } });
+
+        await VendorProfile.create({
+          userId: user.id,
+          fullName: buyerProfile?.fullName || emailName,
+          businessName: "",
+          onboardingStatus: "draft",
+        });
+      }
+    }
+
+    // Idempotent: switching to the role you already have still succeeds.
+    if (user.role !== role) {
+      await user.update({ role });
+    }
+
+    // The role lives inside the JWT, so the switch needs a fresh token.
+    return res.status(200).json({
+      success: true,
+      token: signSession(user),
+      user: sanitizeAuthUser(user),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   sendOtpHandler,
   registerHandler,
   verifyOtpHandler,
+  switchRoleHandler,
   handleDojahWebhook,
 };

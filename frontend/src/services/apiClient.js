@@ -87,6 +87,8 @@ const uploadRequest = async (path, { token, files }) => {
 export const authApi = {
   sendOtp: (payload) => request("/auth/otp-send", { method: "POST", body: payload }),
   verifyOtp: (payload) => request("/auth/otp-verify", { method: "POST", body: payload }),
+  switchRole: (token, role) =>
+    request("/auth/switch-role", { method: "POST", token, body: { role } }),
 };
 
 export const onboardingApi = {
@@ -109,7 +111,11 @@ export const resolveRoleLanding = async (token, role) => {
 
   try {
     const result = await onboardingApi.status(token, role);
-    const done = ["submitted", "approved", "active"].includes(result.onboardingStatus);
+    // KYC-verified users always land on their dashboard — never back through
+    // KYC/onboarding — even if onboardingStatus lags behind.
+    const done =
+      ["submitted", "approved", "active"].includes(result.onboardingStatus) ||
+      result.kycStatus === "verified";
     return done ? dashboards[role] : starts[role];
   } catch (error) {
     return starts[role];

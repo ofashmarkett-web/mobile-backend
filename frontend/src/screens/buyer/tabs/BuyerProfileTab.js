@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../theme/colors";
 import { SHADOWS } from "../../../theme/shadows";
-import { buyerApi } from "../../../services/apiClient";
+import { authApi, buyerApi, resolveRoleLanding } from "../../../services/apiClient";
 import { useUserStore } from "../../../store/userStore";
 import { useFetch } from "../../../hooks/useFetch";
 import PrimaryButton from "../../../components/vendor/PrimaryButton";
@@ -19,10 +19,30 @@ import { initials } from "../../../utils/format";
 
 const BuyerProfileTab = ({ navigation }) => {
   const token = useUserStore((state) => state.token);
+  const setSession = useUserStore((state) => state.setSession);
   const resetUser = useUserStore((state) => state.resetUser);
   const me = useFetch(() => buyerApi.me(token), [token]);
   const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
+  const [switching, setSwitching] = useState(false);
+
+  const becomeVendor = async () => {
+    setSwitching(true);
+    try {
+      // The role lives in the JWT, so switching returns a fresh session.
+      const session = await authApi.switchRole(token, "vendor");
+      setSession({ token: session.token, user: session.user });
+
+      // Vendors who finished onboarding go straight to their dashboard —
+      // not back through KYC.
+      const screen = await resolveRoleLanding(session.token, "vendor");
+      navigation.getParent()?.navigate("Vendor", { screen });
+    } catch (error) {
+      Alert.alert("Could not switch", error.message);
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   useEffect(() => {
     if (me.data?.profile?.defaultAddress) setAddress(me.data.profile.defaultAddress);
@@ -81,13 +101,14 @@ const BuyerProfileTab = ({ navigation }) => {
             label="Become a Vendor"
             variant="outline"
             style={{ marginBottom: 12 }}
+            loading={switching}
             onPress={() =>
               Alert.alert(
                 "Become a Vendor",
                 "You'll set up your store and switch to the vendor workspace.",
                 [
                   { text: "Cancel", style: "cancel" },
-                  { text: "Continue", onPress: () => navigation.getParent()?.navigate("Vendor") },
+                  { text: "Continue", onPress: becomeVendor },
                 ],
               )
             }

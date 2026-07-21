@@ -13,7 +13,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS } from "../../../theme/colors";
 import { SHADOWS } from "../../../theme/shadows";
-import { vendorApi, uploadApi } from "../../../services/apiClient";
+import { authApi, vendorApi, uploadApi } from "../../../services/apiClient";
 import { useUserStore } from "../../../store/userStore";
 import { useFetch } from "../../../hooks/useFetch";
 import ProductThumb from "../../../components/vendor/ProductThumb";
@@ -45,9 +45,26 @@ const MenuRow = ({ icon, title, subtitle, onPress, right, iconSet = "ion" }) => 
 const ProfileTab = ({ navigation }) => {
   const token = useUserStore((state) => state.token);
   const userMetadata = useUserStore((state) => state.userMetadata);
+  const setSession = useUserStore((state) => state.setSession);
   const resetUser = useUserStore((state) => state.resetUser);
   const store = useFetch(() => vendorApi.store(token), [token]);
   const [busy, setBusy] = useState(false);
+  const [switching, setSwitching] = useState(false);
+
+  const switchToBuyer = async () => {
+    setSwitching(true);
+    try {
+      // The role lives in the JWT, so switching returns a fresh session. The
+      // first switch seeds a buyer profile from the vendor one server-side.
+      const session = await authApi.switchRole(token, "buyer");
+      setSession({ token: session.token, user: session.user });
+      navigation.getParent()?.navigate("Buyer");
+    } catch (error) {
+      Alert.alert("Could not switch", error.message);
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   const data = store.data?.store;
   const isLive = Boolean(data?.isLive);
@@ -206,16 +223,14 @@ const ProfileTab = ({ navigation }) => {
 
             <PrimaryButton
               label="Switch to buyer mode"
+              loading={switching}
               onPress={() =>
                 Alert.alert(
                   "Switch to buyer mode",
                   "You'll browse the market as a buyer. Your store stays exactly as you left it.",
                   [
                     { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Switch",
-                      onPress: () => navigation.getParent()?.navigate("Buyer"),
-                    },
+                    { text: "Switch", onPress: switchToBuyer },
                   ],
                 )
               }
