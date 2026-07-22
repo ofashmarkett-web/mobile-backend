@@ -2,7 +2,7 @@ const User = require("../models/User");
 const BuyerProfile = require("../models/BuyerProfile");
 const VendorProfile = require("../models/VendorProfile");
 const RiderProfile = require("../models/RiderProfile");
-const dojahService = require("../services/dojahService");
+const kycService = require("../services/kycService");
 
 const profileByRole = {
   buyer: BuyerProfile,
@@ -270,21 +270,23 @@ const startKycCheck = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Profile not found" });
     }
 
-    const payload = { userId, role };
+    // fullName lets providers that do name matching (QoreID) verify against
+    // the profile; the simulation and Dojah paths simply ignore it.
+    const payload = { userId, role, fullName: profile.fullName };
     let result;
 
     if (check === "bvn") {
-      result = await dojahService.verifyBvn({ ...payload, bvn: req.body.bvn });
+      result = await kycService.verifyBvn({ ...payload, bvn: req.body.bvn });
     } else if (check === "nin") {
-      result = await dojahService.verifyNin({ ...payload, nin: req.body.nin });
+      result = await kycService.verifyNin({ ...payload, nin: req.body.nin });
     } else if (check === "document") {
-      result = await dojahService.verifyDocument({
+      result = await kycService.verifyDocument({
         ...payload,
         documentType: req.body.documentType,
         imageUrl: req.body.imageUrl,
       });
     } else if (check === "liveness") {
-      result = await dojahService.startLiveness({ ...payload, imageUrl: req.body.imageUrl });
+      result = await kycService.startLiveness({ ...payload, imageUrl: req.body.imageUrl });
     } else {
       return res.status(400).json({ success: false, message: "Invalid KYC check" });
     }
@@ -323,6 +325,9 @@ const startKycCheck = async (req, res, next) => {
   }
 };
 
+// Dojah-legacy webhook. QoreID results are returned synchronously by
+// startKycCheck, so QoreID never calls back here — this stays wired for the
+// legacy Dojah provider's async responses only.
 const handleDojahOnboardingWebhook = async (req, res, next) => {
   try {
     const payload = req.body || {};

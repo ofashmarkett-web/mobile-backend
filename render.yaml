@@ -21,6 +21,9 @@ services:
         value: "true"
       - key: KYC_MODE
         value: simulation
+      # QoreID is the primary KYC provider once KYC_MODE flips to "live".
+      - key: KYC_PROVIDER
+        value: qoreid
       - key: VENDOR_VERIFICATION_ENFORCED
         value: "false"
       # Paste these secret values in the Render dashboard (never in git):
@@ -37,6 +40,10 @@ services:
       - key: DOJAH_TEST_APP_ID
         sync: false
       - key: DOJAH_TEST_SECRET_KEY
+        sync: false
+      - key: QOREID_CLIENT_ID
+        sync: false
+      - key: QOREID_SECRET
         sync: false
       - key: CLOUDINARY_URL
         sync: false
