@@ -28,6 +28,7 @@ import {
   LivenessScreen,
   NumberVerifyStep,
   PillButton,
+  ResultSheet,
   isConnectivityIssue,
   performKycCheck,
 } from "../../components/kyc";
@@ -175,11 +176,16 @@ const BoxedField = ({
   optional,
   maxLength,
   autoCapitalize,
+  labelRight,
 }) => (
   <View style={[styles.fieldBox, multiline && styles.fieldBoxMultiline]}>
     <View style={styles.fieldLabelRow}>
       <Text style={styles.innerLabel}>{label}</Text>
-      {optional ? <Text style={styles.optionalTag}>Optional</Text> : null}
+      {labelRight ? (
+        labelRight
+      ) : optional ? (
+        <Text style={styles.optionalTag}>Optional</Text>
+      ) : null}
     </View>
     <TextInput
       style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
@@ -434,10 +440,48 @@ const StoreInfoStep = ({ token, userMetadata, patchNested, goNext, goBack }) => 
   );
 };
 
+// Small green "CAC Verified" chip shown next to the field label once the
+// lookup succeeds (the backend persists cacStatus/cacNumber — nothing extra
+// is stored client-side).
+const CacVerifiedChip = () => (
+  <View style={styles.cacChip}>
+    <Ionicons name="shield-checkmark" size={11} color={COLORS.green} />
+    <Text style={styles.cacChipText}>CAC Verified</Text>
+  </View>
+);
+
 const CacStep = ({ token, userMetadata, patchNested, goNext, goBack }) => {
   const [cacNumber, setCacNumber] = useState(userMetadata?.vendor?.cacNumber || "");
   const [certificate, setCertificate] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [cacResult, setCacResult] = useState(null); // null | "success" | "failed" | "not_found"
+  const [cacVerified, setCacVerified] = useState(false);
+
+  const businessName = userMetadata?.vendor?.businessName || "Your business";
+  const canVerify = cacNumber.trim().length >= 6;
+
+  // Optional lookup — the step continues with or without it; skipping just
+  // means no CAC badge on the store.
+  const verifyCac = async () => {
+    if (!canVerify || verifying) return;
+    setVerifying(true);
+    const outcome = await performKycCheck({
+      token,
+      role: "vendor",
+      check: "cac",
+      payload: { regNumber: cacNumber.trim() },
+    });
+    setVerifying(false);
+    setCacResult(
+      ["success", "failed", "not_found"].includes(outcome?.state) ? outcome.state : "failed",
+    );
+  };
+
+  const dismissCacResult = () => {
+    if (cacResult === "success") setCacVerified(true);
+    setCacResult(null);
+  };
 
   const continueNext = async () => {
     setSaving(true);
@@ -484,16 +528,59 @@ const CacStep = ({ token, userMetadata, patchNested, goNext, goBack }) => {
       <BoxedField
         label="CAC REGISTRATION NUMBER"
         optional
+        labelRight={cacVerified ? <CacVerifiedChip /> : null}
         value={cacNumber}
         onChangeText={setCacNumber}
-        placeholder="eg. RC0000000"
+        placeholder="e.g. RC1234567 or BN1234567"
         autoCapitalize="characters"
+      />
+      <PillButton
+        label="Verify CAC"
+        busy={verifying}
+        busyLabel="Verifying your CAC…"
+        disabled={!canVerify}
+        onPress={verifyCac}
+        style={styles.verifyCacButton}
       />
       <UploadCard
         title="Upload your CAC certificate"
         hint="JPG, PNG or PDF - Max 5MB"
         uri={certificate?.uri}
         onPress={() => pickFromLibrary(setCertificate)}
+      />
+
+      <ResultSheet
+        visible={cacResult === "success"}
+        tone="success"
+        badge="CAC VERIFICATION SUCCESSFUL"
+        icon="shield-checkmark"
+        heading="Verified!"
+        message={`${businessName} is registered with the CAC.`}
+        actionLabel="Continue"
+        onAction={dismissCacResult}
+        onDismiss={dismissCacResult}
+      />
+      <ResultSheet
+        visible={cacResult === "failed"}
+        tone="failed"
+        badge="CAC VERIFICATION FAILED"
+        icon="close"
+        heading="That didn't match"
+        message="We couldn't verify this CAC number. Take another look and retry."
+        actionLabel="Retry"
+        onAction={dismissCacResult}
+        onDismiss={dismissCacResult}
+      />
+      <ResultSheet
+        visible={cacResult === "not_found"}
+        tone="warning"
+        badge="CAC NOT FOUND"
+        icon="search"
+        heading="We couldn't find it"
+        message="We couldn't find this registration number. Check it and try again."
+        actionLabel="Retry"
+        onAction={dismissCacResult}
+        onDismiss={dismissCacResult}
       />
     </StepScaffold>
   );
@@ -1118,6 +1205,23 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 18,
     color: COLORS.slate,
+  },
+  verifyCacButton: {
+    marginTop: 12,
+  },
+  cacChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.greenSoft,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  cacChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: COLORS.green,
   },
   uploadWrap: {
     marginTop: 16,

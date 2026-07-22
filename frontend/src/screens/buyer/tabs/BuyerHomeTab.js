@@ -22,6 +22,14 @@ import { naira, priceLabel } from "../../../utils/format";
 
 const CARD_WIDTH = (Dimensions.get("window").width - 16 * 2 - 12) / 2;
 
+// Subtle green trust badge for CAC-verified stores (matches StatusPill small).
+const CacChip = () => (
+  <View style={styles.cacChip}>
+    <Ionicons name="shield-checkmark" size={10} color={COLORS.green} />
+    <Text style={styles.cacChipText}>CAC Verified</Text>
+  </View>
+);
+
 const BuyerHomeTab = ({ navigation, switchTab }) => {
   const token = useUserStore((state) => state.token);
   const me = useFetch(() => buyerApi.me(token).catch(() => null), [token]);
@@ -94,6 +102,7 @@ const BuyerHomeTab = ({ navigation, switchTab }) => {
                           </Text>
                         </View>
                         <View style={styles.tagRow}>
+                          {store.cacVerified ? <CacChip /> : null}
                           {store.tags.map((tag) => (
                             <StatusPill
                               key={tag}
@@ -245,6 +254,20 @@ const styles = StyleSheet.create({
     gap: 4,
     flexWrap: "wrap",
     justifyContent: "center",
+  },
+  cacChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: COLORS.greenSoft,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  cacChipText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: COLORS.green,
   },
   grid: {
     flexDirection: "row",

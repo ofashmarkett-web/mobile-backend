@@ -26,12 +26,14 @@ const activeProvider = () => {
 
 const verifyBvn = (params) => activeProvider().verifyBvn(params);
 const verifyNin = (params) => activeProvider().verifyNin(params);
+const verifyCac = (params) => activeProvider().verifyCac(params);
 const verifyDocument = (params) => activeProvider().verifyDocument(params);
 const startLiveness = (params) => activeProvider().startLiveness(params);
 
 module.exports = {
   verifyBvn,
   verifyNin,
+  verifyCac,
   verifyDocument,
   startLiveness,
 };

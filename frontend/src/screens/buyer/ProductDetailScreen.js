@@ -23,6 +23,14 @@ import { naira, priceLabel } from "../../utils/format";
 
 const { width } = Dimensions.get("window");
 
+// Subtle green trust badge for CAC-verified stores.
+const CacChip = () => (
+  <View style={styles.cacChip}>
+    <Ionicons name="shield-checkmark" size={10} color={COLORS.green} />
+    <Text style={styles.cacChipText}>CAC Verified</Text>
+  </View>
+);
+
 const ProductDetailScreen = ({ navigation, route }) => {
   const { productId } = route.params;
   const token = useUserStore((state) => state.token);
@@ -154,6 +162,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.storeName}>{store.businessName}</Text>
                 <Text style={styles.storeMeta}>@{store.storeHandle}</Text>
+                {store.cacVerified ? <CacChip /> : null}
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 <Stars rating={store.rating} size={12} />
@@ -297,6 +306,22 @@ const styles = StyleSheet.create({
   },
   storeName: { fontSize: 14, fontWeight: "700", color: COLORS.ink },
   storeMeta: { fontSize: 11.5, color: COLORS.muted, marginTop: 2 },
+  cacChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginTop: 4,
+    backgroundColor: COLORS.greenSoft,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  cacChipText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: COLORS.green,
+  },
   reviewRow: { marginBottom: 10, gap: 4 },
   reviewText: { fontSize: 12.5, color: COLORS.slate, lineHeight: 18 },
   footer: {

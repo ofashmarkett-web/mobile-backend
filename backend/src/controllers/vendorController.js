@@ -78,6 +78,8 @@ const serializeStore = async (profile, user) => {
       verified: isVendorVerified(profile),
       kycStatus: profile.kycStatus,
       onboardingStatus: profile.onboardingStatus,
+      // Optional CAC trust badge — cosmetic only, never gates approval.
+      cacVerified: profile.cacStatus === "verified",
     },
     owner: user ? { id: user.id, email: user.email, phone: user.phone } : undefined,
   };

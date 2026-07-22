@@ -15,6 +15,13 @@ const VendorProfile = sequelize.define(
     categories: { type: DataTypes.JSONB, defaultValue: [] },
     cacNumber: { type: DataTypes.STRING(64), field: "cac_number" },
     cacCertificateUrl: { type: DataTypes.TEXT, field: "cac_certificate_url" },
+    // Optional trust badge: outcome of the CAC registration-number lookup.
+    // Never gates vendor approval — see onboardingController.coreKycChecks.
+    cacStatus: {
+      type: DataTypes.ENUM("not_started", "pending", "verified", "failed"),
+      defaultValue: "not_started",
+      field: "cac_status",
+    },
     storeLogoUrl: { type: DataTypes.TEXT, field: "store_logo_url" },
     storeBannerUrl: { type: DataTypes.TEXT, field: "store_banner_url" },
     address: { type: DataTypes.TEXT },

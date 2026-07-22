@@ -50,6 +50,8 @@ const storeCard = (profile, ratings) => ({
   isLive: profile.isLive,
   rating: ratings[profile.userId]?.rating || 0,
   ratingCount: ratings[profile.userId]?.ratingCount || 0,
+  // Optional CAC trust badge shown on buyer-facing store cards.
+  cacVerified: profile.cacStatus === "verified",
 });
 
 const getMyProfile = async (req, res, next) => {

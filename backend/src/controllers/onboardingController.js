@@ -276,6 +276,55 @@ const startKycCheck = async (req, res, next) => {
     const payload = { userId, role, fullName: profile.fullName };
     let result;
 
+    // CAC company lookup — vendor-only OPTIONAL trust badge, handled as a
+    // self-contained branch. It writes cacStatus (+ cacNumber on success) and
+    // deliberately never touches the core KYC aggregate: coreKycChecks stays
+    // nin/document/liveness, so CAC can never gate vendor approval.
+    if (check === "cac") {
+      if (role !== "vendor") {
+        return res
+          .status(400)
+          .json({ success: false, message: "CAC verification is only available for vendors" });
+      }
+
+      const regNumber = String(req.body.regNumber || "").trim();
+
+      if (!regNumber) {
+        return res
+          .status(400)
+          .json({ success: false, message: "A CAC registration number (regNumber) is required" });
+      }
+
+      const cacResult = await kycService.verifyCac({
+        ...payload,
+        regNumber,
+        companyName: profile.businessName,
+      });
+
+      // Same outcome mapping as the core checks, minus manual_review (the
+      // cac_status enum keeps it simple): inconclusive results stay "pending"
+      // so the badge is simply not granted yet.
+      let cacStatus;
+      if (cacResult.status === "mocked") {
+        cacStatus = "pending";
+      } else if (!cacResult.ok) {
+        cacStatus = "failed";
+      } else if (cacResult.environment === "simulation" || cacResult.data?.entity) {
+        cacStatus = "verified";
+      } else {
+        cacStatus = "pending";
+      }
+
+      await profile.update({
+        cacStatus,
+        ...(cacStatus === "verified" ? { cacNumber: regNumber } : {}),
+      });
+
+      return res
+        .status(200)
+        .json({ success: true, kyc: cacResult, profile: await profile.reload() });
+    }
+
     if (check === "bvn") {
       result = await kycService.verifyBvn({ ...payload, bvn: req.body.bvn });
     } else if (check === "nin") {

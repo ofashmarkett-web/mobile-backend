@@ -234,6 +234,38 @@ const verifyBvn = ({ bvn, userId, role, fullName }) => {
   });
 };
 
+// CAC company lookup: POST /v2/ng/identities/cac-premium with { regNumber }
+// — QoreID's documented "CAC (Premium) V2" endpoint
+// (https://docs.qoreid.com/docs/cac-premium-v2). regNumber is the registered
+// company number (RC, BN or IT). The docs' example sends the bare number
+// ("11000011"), so a typed RC/BN/IT prefix is stripped before sending. The
+// 200 response carries summary.cac_check = "verified", status.status =
+// "verified" and the company entity under the "cac" key — all handled by the
+// shared defensive mapper.
+const verifyCac = ({ regNumber, userId, role }) => {
+  const reference = `${role}:${userId}:cac`;
+  const value = String(regNumber || "").trim();
+
+  if (!value) {
+    return Promise.resolve(
+      result({
+        ok: false,
+        status: "failed",
+        reference,
+        data: { error: "A CAC registration number is required" },
+      }),
+    );
+  }
+
+  return postIdentity({
+    path: "/v2/ng/identities/cac-premium",
+    body: { regNumber: value.replace(/^(RC|BN|IT)[\s/-]*/i, "") },
+    reference,
+    label: "CAC",
+    entityKeys: ["cac"],
+  });
+};
+
 // Document check: QoreID's REST identity API verifies documents by ID NUMBER
 // (e.g. POST /v1/ng/identities/drivers-license/{idNumber}), but our onboarding
 // flow captures a document IMAGE and never collects the document's number.
@@ -311,6 +343,7 @@ const startLiveness = ({ userId, role, imageUrl, nin }) => {
 module.exports = {
   verifyBvn,
   verifyNin,
+  verifyCac,
   verifyDocument,
   startLiveness,
   // Exported for unit smoke tests of the response mapping.

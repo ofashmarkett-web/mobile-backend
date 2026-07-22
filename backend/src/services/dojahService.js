@@ -193,6 +193,77 @@ const startLiveness = ({ userId, role, imageUrl }) => {
   return requestDojah("/api/v1/kyc/face/liveness", { image_url: imageUrl, reference });
 };
 
+// CAC company lookup (optional trust badge — never gates approval).
+// Simulation rules mirror the NIN/BVN convention:
+//   regNumber ends in 00 -> NOT FOUND, ends in 01 -> VERIFICATION FAILED,
+//   anything else -> SUCCESS with a fake entity carrying the companyName.
+// Legacy live Dojah: CAC is not built for Dojah — return the "mocked" style
+// result the controller treats as inconclusive (badge stays pending).
+const verifyCac = async ({ regNumber, companyName, userId, role }) => {
+  const reference = `${role}:${userId}:cac`;
+
+  if (KYC_MODE !== "simulation") {
+    return {
+      ok: false,
+      provider: "dojah",
+      environment: DOJAH_ENV,
+      status: "mocked",
+      reference,
+      message: "CAC verification is not available on the Dojah provider",
+    };
+  }
+
+  await simulatedLatency();
+  const value = String(regNumber || "").trim();
+
+  if (!value) {
+    return simulated({
+      ok: false,
+      status: "failed",
+      reference,
+      data: { error: "A CAC registration number is required" },
+    });
+  }
+
+  if (value.endsWith("00")) {
+    return simulated({
+      ok: false,
+      status: "failed",
+      reference,
+      data: {
+        error: "CAC number not found",
+        message: "No CAC record found for this registration number",
+      },
+    });
+  }
+
+  if (value.endsWith("01")) {
+    return simulated({
+      ok: false,
+      status: "failed",
+      reference,
+      data: {
+        error: "CAC verification failed",
+        message: "The details provided do not match this CAC record",
+      },
+    });
+  }
+
+  return simulated({
+    ok: true,
+    status: "pending",
+    reference,
+    data: {
+      entity: {
+        regNumber: value,
+        companyName: companyName || "SIMULATED BUSINESS",
+        status: "ACTIVE",
+        reference,
+      },
+    },
+  });
+};
+
 const verifyDocument = ({ userId, role, documentType, imageUrl }) => {
   const reference = `${role}:${userId}:document`;
 
@@ -219,6 +290,7 @@ const verifyDocument = ({ userId, role, documentType, imageUrl }) => {
 module.exports = {
   verifyBvn,
   verifyNin,
+  verifyCac,
   verifyDocument,
   startLiveness,
 };

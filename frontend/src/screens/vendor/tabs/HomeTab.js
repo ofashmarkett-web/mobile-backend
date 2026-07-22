@@ -124,6 +124,12 @@ const HomeTab = ({ navigation, switchTab }) => {
                 : "No ratings yet"}
             </Text>
           </View>
+          {store?.verification?.cacVerified ? (
+            <View style={styles.cacChip}>
+              <Ionicons name="shield-checkmark" size={12} color={COLORS.green} />
+              <Text style={styles.cacChipText}>CAC Verified</Text>
+            </View>
+          ) : null}
         </View>
 
         {hasInsight ? (
@@ -316,6 +322,21 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 12,
     color: COLORS.slate,
+  },
+  cacChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+    backgroundColor: COLORS.greenSoft,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  cacChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: COLORS.green,
   },
   insight: {
     flexDirection: "row",
