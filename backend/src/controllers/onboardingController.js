@@ -3,6 +3,7 @@ const BuyerProfile = require("../models/BuyerProfile");
 const VendorProfile = require("../models/VendorProfile");
 const RiderProfile = require("../models/RiderProfile");
 const kycService = require("../services/kycService");
+const { encrypt, decrypt } = require("../utils/secureField");
 
 const profileByRole = {
   buyer: BuyerProfile,
@@ -280,13 +281,44 @@ const startKycCheck = async (req, res, next) => {
     } else if (check === "nin") {
       result = await kycService.verifyNin({ ...payload, nin: req.body.nin });
     } else if (check === "document") {
-      result = await kycService.verifyDocument({
-        ...payload,
-        documentType: req.body.documentType,
-        imageUrl: req.body.imageUrl,
-      });
+      // Policy: the document check calls NO provider in ANY mode (simulation or
+      // live). Identity is proven by the NIN lookup plus the face-match against
+      // the NIMC photo; the uploaded document photo is retained as supporting
+      // evidence (documentImageUrl) and the check auto-passes. QoreID has no
+      // REST endpoint for image-based document verification, and none is needed
+      // for approval.
+      const documentReference = `${role}:${userId}:document`;
+      result = req.body.imageUrl
+        ? {
+            provider: "internal",
+            environment: process.env.KYC_MODE === "simulation" ? "simulation" : "live",
+            ok: true,
+            status: "verified",
+            reference: documentReference,
+            data: {
+              entity: {
+                document_type: req.body.documentType || "ID",
+                status: "verified",
+                evidence: "stored",
+                reference: documentReference,
+              },
+            },
+          }
+        : {
+            provider: "internal",
+            ok: false,
+            status: "failed",
+            reference: documentReference,
+            data: { error: "A document image is required" },
+          };
     } else if (check === "liveness") {
-      result = await kycService.startLiveness({ ...payload, imageUrl: req.body.imageUrl });
+      // Live QoreID face-match needs the applicant's NIN, saved encrypted when
+      // the NIN check verified. Simulation and legacy-Dojah paths ignore it.
+      result = await kycService.startLiveness({
+        ...payload,
+        imageUrl: req.body.imageUrl,
+        nin: decrypt(profile.ninEncrypted),
+      });
     } else {
       return res.status(400).json({ success: false, message: "Invalid KYC check" });
     }
@@ -311,10 +343,22 @@ const startKycCheck = async (req, res, next) => {
       checkStatus = "pending";
     }
 
+    const extraFields = {};
+
+    // Persist the NIN (encrypted at rest) once verified — the liveness
+    // face-match needs it — and keep the document image as stored evidence.
+    if (check === "nin" && checkStatus === "verified") {
+      extraFields.ninEncrypted = encrypt(req.body.nin);
+    }
+    if (check === "document" && req.body.imageUrl) {
+      extraFields.documentImageUrl = req.body.imageUrl;
+    }
+
     await profile.update({
       dojahReference: reference,
       [statusField]: checkStatus,
       [referenceField]: reference,
+      ...extraFields,
     });
 
     const syncedProfile = await syncAggregateKyc({ profile: await profile.reload(), userId });

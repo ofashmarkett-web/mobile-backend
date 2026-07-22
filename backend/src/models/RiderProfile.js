@@ -45,6 +45,12 @@ const RiderProfile = sequelize.define(
       defaultValue: "not_started",
       field: "liveness_status",
     },
+    // NIN encrypted at rest (AES-256-GCM via utils/secureField), saved when the
+    // NIN check verifies — required for QoreID's face-match liveness call.
+    ninEncrypted: { type: DataTypes.TEXT, field: "nin_encrypted" },
+    // Uploaded ID document image, retained as supporting evidence only —
+    // identity is proven by the NIN lookup + face-match, not this image.
+    documentImageUrl: { type: DataTypes.TEXT, field: "document_image_url" },
     dojahReference: { type: DataTypes.STRING(160), field: "dojah_reference" },
     bvnReference: { type: DataTypes.STRING(160), field: "bvn_reference" },
     ninReference: { type: DataTypes.STRING(160), field: "nin_reference" },

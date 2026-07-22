@@ -45,5 +45,8 @@ services:
         sync: false
       - key: QOREID_SECRET
         sync: false
+      # Random 32+ char secret that encrypts stored NINs; defaults to JWT_SECRET.
+      - key: KYC_DATA_KEY
+        sync: false
       - key: CLOUDINARY_URL
         sync: false

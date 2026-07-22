@@ -238,9 +238,11 @@ const verifyBvn = ({ bvn, userId, role, fullName }) => {
 // (e.g. POST /v1/ng/identities/drivers-license/{idNumber}), but our onboarding
 // flow captures a document IMAGE and never collects the document's number.
 // QoreID's image-based document verification is only offered through its
-// hosted SDK/workflow products, not a documented server-side REST endpoint,
-// so rather than invent one we route the document check to manual review
-// (status "mocked" -> manual_review in the controller).
+// hosted SDK/workflow products, not a documented server-side REST endpoint.
+// NOTE: the onboarding controller no longer routes the document check to any
+// provider — it stores the image as evidence and auto-passes (identity is
+// proven by NIN lookup + face-match). This function is kept for the facade's
+// contract; if it is ever called it routes to manual review.
 const verifyDocument = ({ userId, role, documentType, imageUrl }) => {
   const reference = `${role}:${userId}:document`;
 
@@ -264,11 +266,11 @@ const verifyDocument = ({ userId, role, documentType, imageUrl }) => {
 };
 
 // Face match: POST /v1/ng/identities/face-verification/nin with
-// { idNumber, photoUrl }. This needs the applicant's NIN alongside the selfie,
-// but profiles only persist a synthetic reference string ("role:userId:nin"),
-// not the NIN itself, so the controller cannot supply idNumber today. When a
-// NIN is not provided the check routes to manual review instead of guessing;
-// if NIN persistence is added later, passing `nin` here activates the real call.
+// { idNumber, photoUrl }. The applicant's NIN is persisted encrypted on the
+// profile (nin_encrypted) when the NIN check verifies; the controller decrypts
+// it and passes it here as `nin`, activating the real call. Without a stored
+// NIN the check fails with an instruction to verify the NIN first — the app
+// surfaces failed-state messages to the user.
 const startLiveness = ({ userId, role, imageUrl, nin }) => {
   const reference = `${role}:${userId}:liveness`;
 
@@ -285,10 +287,15 @@ const startLiveness = ({ userId, role, imageUrl, nin }) => {
 
   if (!/^\d{11}$/.test(nin || "")) {
     return Promise.resolve(
-      inconclusiveResult(
+      result({
+        ok: false,
+        status: "failed",
         reference,
-        "QoreID face verification requires the applicant's NIN, which is not stored on the profile — routed to manual review",
-      ),
+        data: {
+          error: "NIN required for face verification",
+          message: "Verify your NIN first, then retake your selfie.",
+        },
+      }),
     );
   }
 
