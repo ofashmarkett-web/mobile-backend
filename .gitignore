@@ -18,3 +18,8 @@ backend/uploads/
 # OS / editor
 .DS_Store
 *.log
+
+# Local tooling config — never commit
+.??aude/
+??AUDE.md
+AGENTS.md
