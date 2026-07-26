@@ -16,11 +16,30 @@ import ProductThumb from "../../components/vendor/ProductThumb";
 import PrimaryButton from "../../components/vendor/PrimaryButton";
 import { naira } from "../../utils/format";
 
+// One checkout line — shared by single-product and cart mode.
+const CheckoutItemRow = ({ imageUrl, name, meta, price }) => (
+  <View style={styles.itemRow}>
+    <ProductThumb uri={imageUrl} size={54} />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.itemName} numberOfLines={1}>
+        {name}
+      </Text>
+      <Text style={styles.itemMeta}>{meta}</Text>
+    </View>
+    <Text style={styles.itemPrice}>{naira(price)}</Text>
+  </View>
+);
+
 // Escrow checkout per the MVP spec: Confirm Price, then Make Payment, with the
-// funds held in escrow until the buyer confirms delivery.
+// funds held in escrow until the buyer confirms delivery. Supports two modes:
+// - single-product (params: product/store/size/quantity/unitPrice), and
+// - cartMode, which reads the persisted cart and places one order per line.
 const CheckoutEscrowScreen = ({ navigation, route }) => {
-  const { product, store, size, quantity, unitPrice } = route.params;
+  const { product, store, size, quantity, unitPrice, cartMode } = route.params || {};
   const token = useUserStore((state) => state.token);
+  const cartItems = useUserStore((state) => state.cart.items);
+  const removeItem = useUserStore((state) => state.removeItem);
+  const clearCart = useUserStore((state) => state.clearCart);
   const [address, setAddress] = useState("");
   const [priceConfirmed, setPriceConfirmed] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -34,9 +53,29 @@ const CheckoutEscrowScreen = ({ navigation, route }) => {
       .catch(() => {});
   }, [token]);
 
-  const total = unitPrice * quantity;
+  // Unified list of what is being bought, whichever mode we're in.
+  const items = cartMode
+    ? cartItems
+    : [
+        {
+          productId: product.id,
+          name: product.name,
+          imageUrl: (product.images || [])[0] || null,
+          unitPrice,
+          size,
+          quantity,
+          vendorName: store?.businessName || "",
+        },
+      ];
 
-  const placeOrder = async () => {
+  const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+
+  const itemMeta = (item) =>
+    `${item.vendorName ? `${item.vendorName}   ` : ""}${
+      item.size ? `Size: ${item.size}   ` : ""
+    }Qty: ${item.quantity}`;
+
+  const placeSingleOrder = async () => {
     setPlacing(true);
     try {
       const result = await buyerApi.placeOrder(token, {
@@ -67,6 +106,50 @@ const CheckoutEscrowScreen = ({ navigation, route }) => {
     }
   };
 
+  // Cart checkout places one order per line, sequentially. Each success is
+  // removed from the cart immediately, so a mid-run failure keeps only the
+  // unplaced items in the cart.
+  const placeCartOrders = async () => {
+    setPlacing(true);
+    const lines = [...cartItems];
+    try {
+      for (const line of lines) {
+        try {
+          await buyerApi.placeOrder(token, {
+            productId: line.productId,
+            size: line.size,
+            quantity: line.quantity,
+            deliveryAddress: address,
+          });
+        } catch (error) {
+          Alert.alert(
+            "Could not place order",
+            `"${line.name}" failed: ${error.message}\n\nIt is still in your cart with any remaining items — anything already paid for was removed.`,
+          );
+          return;
+        }
+        removeItem(line.productId, line.size);
+      }
+
+      buyerApi.updateMe(token, { defaultAddress: address }).catch(() => {});
+      clearCart();
+
+      Alert.alert(
+        "Payment secured 🔒",
+        `${lines.length} order${lines.length === 1 ? " is" : "s are"} placed. ${naira(total)} is held in escrow until you confirm delivery.`,
+        [
+          {
+            text: "View my orders",
+            onPress: () =>
+              navigation.navigate("BuyerDashboard", { initialTab: "orders" }),
+          },
+        ],
+      );
+    } finally {
+      setPlacing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.flex} edges={["top"]}>
       <View style={styles.header}>
@@ -81,17 +164,15 @@ const CheckoutEscrowScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.itemRow}>
-          <ProductThumb uri={(product.images || [])[0]} size={54} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.itemName}>{product.name}</Text>
-            <Text style={styles.itemMeta}>
-              {store ? `${store.businessName}   ` : ""}
-              {size ? `Size: ${size}   ` : ""}Qty: {quantity}
-            </Text>
-          </View>
-          <Text style={styles.itemPrice}>{naira(total)}</Text>
-        </View>
+        {items.map((item) => (
+          <CheckoutItemRow
+            key={`${item.productId}-${item.size || "nosize"}`}
+            imageUrl={item.imageUrl}
+            name={item.name}
+            meta={itemMeta(item)}
+            price={item.unitPrice * item.quantity}
+          />
+        ))}
 
         <Text style={styles.sectionLabel}>DELIVERY ADDRESS</Text>
         <TextInput
@@ -112,10 +193,21 @@ const CheckoutEscrowScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Item total</Text>
-            <Text style={styles.summaryValue}>{naira(total)}</Text>
-          </View>
+          {cartMode ? (
+            items.map((item) => (
+              <View key={`sum-${item.productId}-${item.size || "nosize"}`} style={styles.summaryRow}>
+                <Text style={styles.summaryLabel} numberOfLines={1}>
+                  {item.name} × {item.quantity}
+                </Text>
+                <Text style={styles.summaryValue}>{naira(item.unitPrice * item.quantity)}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Item total</Text>
+              <Text style={styles.summaryValue}>{naira(total)}</Text>
+            </View>
+          )}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Delivery</Text>
             <Text style={styles.summaryNote}>Arranged after vendor accepts</Text>
@@ -136,14 +228,15 @@ const CheckoutEscrowScreen = ({ navigation, route }) => {
         {!priceConfirmed ? (
           <PrimaryButton
             label={`Confirm Price — ${naira(total)}`}
+            disabled={items.length === 0}
             onPress={() => setPriceConfirmed(true)}
           />
         ) : (
           <PrimaryButton
             label="Make Payment"
             loading={placing}
-            disabled={!address.trim()}
-            onPress={placeOrder}
+            disabled={!address.trim() || items.length === 0}
+            onPress={cartMode ? placeCartOrders : placeSingleOrder}
           />
         )}
       </View>
@@ -222,9 +315,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
     paddingVertical: 11,
   },
-  summaryLabel: { fontSize: 13, color: COLORS.muted },
+  summaryLabel: { flex: 1, fontSize: 13, color: COLORS.muted },
   summaryValue: { fontSize: 13, fontWeight: "600", color: COLORS.ink },
   summaryNote: { fontSize: 12, color: COLORS.muted, fontStyle: "italic" },
   summaryTotalRow: { borderTopWidth: 1, borderTopColor: COLORS.line },

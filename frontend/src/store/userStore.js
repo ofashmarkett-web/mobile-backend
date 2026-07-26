@@ -1,5 +1,25 @@
 import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearSession, loadSession, saveSession } from "../services/sessionStorage";
+
+// Buyer preferences that must survive app restarts: the one-time location
+// prompt flag, saved device coordinates and recent marketplace searches.
+const BUYER_PREFS_KEY = "ofash.buyerPrefs.v1";
+
+const persistBuyerPrefs = (prefs) => {
+  AsyncStorage.setItem(BUYER_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
+};
+
+// The buyer's cart lives on the device (client-persisted) — orders are only
+// created at checkout, one per cart line.
+const CART_KEY = "ofash.cart.v1";
+
+const persistCart = (cart) => {
+  AsyncStorage.setItem(CART_KEY, JSON.stringify(cart)).catch(() => {});
+};
+
+// A cart line is unique per product + size combination.
+const cartLineKey = (line) => `${line.productId}::${line.size || ""}`;
 
 export const FIGMA_TRACKS = {
   splash: ["34-8", "41-717", "41-725"],
@@ -101,6 +121,123 @@ const initialMetadata = {
 
 export const useUserStore = create((set, get) => ({
   token: null,
+  buyerPrefs: {
+    locationPromptSeen: false,
+    location: null, // { latitude, longitude }
+    recentSearches: [],
+    // UI-only for now — push notifications are not wired up yet, this simply
+    // remembers the buyer's preference for when they are.
+    notificationsEnabled: true,
+  },
+  hydrateBuyerPrefs: async () => {
+    try {
+      const raw = await AsyncStorage.getItem(BUYER_PREFS_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw);
+        set((state) => ({ buyerPrefs: { ...state.buyerPrefs, ...stored } }));
+      }
+    } catch (error) {
+      // Corrupt prefs are non-fatal — the location prompt simply shows again.
+    }
+  },
+  setLocationPromptSeen: () =>
+    set((state) => {
+      const buyerPrefs = { ...state.buyerPrefs, locationPromptSeen: true };
+      persistBuyerPrefs(buyerPrefs);
+      return { buyerPrefs };
+    }),
+  setBuyerLocation: (location) =>
+    set((state) => {
+      const buyerPrefs = { ...state.buyerPrefs, location, locationPromptSeen: true };
+      persistBuyerPrefs(buyerPrefs);
+      return { buyerPrefs };
+    }),
+  setNotificationsEnabled: (notificationsEnabled) =>
+    set((state) => {
+      const buyerPrefs = { ...state.buyerPrefs, notificationsEnabled };
+      persistBuyerPrefs(buyerPrefs);
+      return { buyerPrefs };
+    }),
+  // ---- Cart (client-persisted) -------------------------------------------
+  // items: [{ productId, name, imageUrl, unitPrice, size, quantity,
+  //           stockQuantity, vendorName }]
+  cart: { items: [] },
+  hydrateCart: async () => {
+    try {
+      const raw = await AsyncStorage.getItem(CART_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw);
+        if (Array.isArray(stored?.items)) {
+          set({ cart: { items: stored.items } });
+        }
+      }
+    } catch (error) {
+      // A corrupt cart is non-fatal — the buyer simply starts empty.
+    }
+  },
+  addToCart: (line) =>
+    set((state) => {
+      const items = [...state.cart.items];
+      const index = items.findIndex((item) => cartLineKey(item) === cartLineKey(line));
+
+      if (index >= 0) {
+        // Same product + size already in the cart — merge quantities, capped
+        // at the available stock.
+        const existing = items[index];
+        const stock = Math.max(1, line.stockQuantity ?? existing.stockQuantity ?? 1);
+        items[index] = {
+          ...existing,
+          ...line,
+          quantity: Math.min(existing.quantity + (line.quantity || 1), stock),
+        };
+      } else {
+        const stock = Math.max(1, line.stockQuantity ?? 1);
+        items.push({ ...line, quantity: Math.min(line.quantity || 1, stock) });
+      }
+
+      const cart = { items };
+      persistCart(cart);
+      return { cart };
+    }),
+  updateQuantity: (productId, size, quantity) =>
+    set((state) => {
+      const items = state.cart.items.map((item) => {
+        if (item.productId !== productId || (item.size || "") !== (size || "")) return item;
+        const stock = Math.max(1, item.stockQuantity ?? quantity);
+        return { ...item, quantity: Math.max(1, Math.min(quantity, stock)) };
+      });
+      const cart = { items };
+      persistCart(cart);
+      return { cart };
+    }),
+  removeItem: (productId, size) =>
+    set((state) => {
+      const items = state.cart.items.filter(
+        (item) => item.productId !== productId || (item.size || "") !== (size || ""),
+      );
+      const cart = { items };
+      persistCart(cart);
+      return { cart };
+    }),
+  clearCart: () => {
+    const cart = { items: [] };
+    persistCart(cart);
+    set({ cart });
+  },
+  addRecentSearch: (term) =>
+    set((state) => {
+      const cleaned = String(term || "").trim();
+      if (!cleaned) return {};
+      const recentSearches = [
+        cleaned,
+        ...state.buyerPrefs.recentSearches.filter(
+          (item) => item.toLowerCase() !== cleaned.toLowerCase(),
+        ),
+      ].slice(0, 6);
+      const buyerPrefs = { ...state.buyerPrefs, recentSearches };
+      persistBuyerPrefs(buyerPrefs);
+      return { buyerPrefs };
+    }),
   activeTrack: "auth",
   activeSteps: {
     splash: 0,

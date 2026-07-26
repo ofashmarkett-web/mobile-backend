@@ -13,6 +13,7 @@ router.get(
   requireVerifiedVendor,
   disputeController.listVendorDisputes,
 );
+router.get("/buyer", protect, requireRole("buyer"), disputeController.listBuyerDisputes);
 router.get("/:id", protect, disputeController.getDispute);
 
 module.exports = router;

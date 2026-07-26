@@ -42,6 +42,7 @@ const serializeOrder = (order) => ({
   pickupCode: order.pickupCode,
   pickupAddress: order.pickupAddress,
   deliveryAddress: order.deliveryAddress,
+  vendorId: order.vendorId,
   buyerId: order.buyerId,
   buyerName:
     order.buyer?.buyerProfile?.fullName || order.buyer?.email?.split("@")[0] || "Buyer",
@@ -356,6 +357,34 @@ const confirmDelivery = transition(["delivered"], async (order, req) => {
   });
 });
 
+// Buyer edits the delivery address — only while the order hasn't started
+// moving (pending/packaging). After that the rider may already be en route.
+const updateDeliveryAddress = async (req, res, next) => {
+  try {
+    const order = await Order.findOne({
+      where: { id: req.params.id, buyerId: req.user.id },
+      include: [buyerInclude],
+    });
+
+    if (!order) throw httpError(404, "Order not found");
+
+    const deliveryAddress =
+      typeof req.body?.deliveryAddress === "string" ? req.body.deliveryAddress.trim() : "";
+
+    if (!deliveryAddress) throw httpError(400, "Delivery address is required");
+
+    if (!["pending", "packaging"].includes(order.status)) {
+      throw httpError(409, "Address can no longer be changed — the order is already moving.");
+    }
+
+    await order.update({ deliveryAddress });
+
+    return res.status(200).json({ success: true, order: serializeOrder(order) });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   listVendorOrders,
   listBuyerOrders,
@@ -368,5 +397,6 @@ module.exports = {
   confirmPickup,
   markDelivered,
   confirmDelivery,
+  updateDeliveryAddress,
   releaseDueEscrows,
 };

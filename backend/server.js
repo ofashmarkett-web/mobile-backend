@@ -14,6 +14,7 @@ const buyerRoutes = require("./src/routes/buyerRoutes");
 const productRoutes = require("./src/routes/productRoutes");
 const orderRoutes = require("./src/routes/orderRoutes");
 const disputeRoutes = require("./src/routes/disputeRoutes");
+const reviewRoutes = require("./src/routes/reviewRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
 const User = require("./src/models/User");
 const BuyerProfile = require("./src/models/BuyerProfile");
@@ -101,6 +102,7 @@ app.use("/api/v1/buyers", buyerRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/disputes", disputeRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/uploads", uploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

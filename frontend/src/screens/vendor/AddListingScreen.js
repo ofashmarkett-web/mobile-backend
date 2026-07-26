@@ -36,6 +36,8 @@ const OCCASIONS = [
   "Night out",
 ];
 const STYLES = ["Ankara", "Adire", "Aso-oke", "Lace", "Sequin", "Denim", "Monochrome", "Tie-dye"];
+// Optional colours — power the buyer marketplace colour filter.
+const COLOURS = ["Black", "Brown", "Red", "Green", "Yellow", "Blue", "White", "Multicolour"];
 
 const CATEGORY_OPTIONS = [
   {
@@ -131,6 +133,7 @@ const AddListingScreen = ({ navigation }) => {
   // Step 3 — tags
   const [occasions, setOccasions] = useState([]);
   const [styleTags, setStyleTags] = useState([]);
+  const [colours, setColours] = useState([]);
   const [customTags, setCustomTags] = useState("");
 
   const toggleIn = (list, setList) => (value) =>
@@ -159,6 +162,7 @@ const AddListingScreen = ({ navigation }) => {
         stockQuantity,
         occasionTags: occasions,
         styleTags,
+        colours,
         customTags: customTags
           .split(",")
           .map((tag) => tag.trim())
@@ -322,6 +326,13 @@ const AddListingScreen = ({ navigation }) => {
             options={STYLES}
             selected={styleTags}
             onToggle={toggleIn(styleTags, setStyleTags)}
+          />
+
+          <FieldLabel>COLOURS</FieldLabel>
+          <ChipGroup
+            options={COLOURS}
+            selected={colours}
+            onToggle={toggleIn(colours, setColours)}
           />
 
           <FieldLabel>CUSTOM TAGS</FieldLabel>

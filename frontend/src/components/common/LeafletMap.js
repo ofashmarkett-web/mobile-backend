@@ -5,8 +5,9 @@ import { WebView } from "react-native-webview";
 import { COLORS } from "../../theme/colors";
 import { SHADOWS } from "../../theme/shadows";
 
-// Static HTML shell — loaded once. The pin is driven from React Native via
-// injectJavaScript(window.setPin(...)) so prop changes never reload the page.
+// Static HTML shell — loaded once. Pins are driven from React Native via
+// injectJavaScript (window.setPin / window.setMarkers) so prop changes never
+// reload the page. Pan/zoom stays interactive inside the WebView.
 const MAP_HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -38,6 +39,41 @@ const MAP_HTML = `<!DOCTYPE html>
       }
       map.setView([lat, lng], zoom || 16, { animate: true });
     };
+    // Multi-marker mode: colored dots, optional dashed route + fitBounds.
+    var markerLayer = null;
+    var MARKER_COLORS = { teal: "#0FB5AA", orange: "#F97316", red: "#E5484D" };
+    window.setMarkers = function (list, routeBetween, fit) {
+      if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
+      var group = L.layerGroup();
+      var points = [];
+      (list || []).forEach(function (item) {
+        if (typeof item.latitude !== "number" || typeof item.longitude !== "number") return;
+        if (isNaN(item.latitude) || isNaN(item.longitude)) return;
+        var latLng = [item.latitude, item.longitude];
+        points.push(latLng);
+        var dot = L.circleMarker(latLng, {
+          radius: 9,
+          color: "#FFFFFF",
+          weight: 3,
+          fillColor: MARKER_COLORS[item.color] || MARKER_COLORS.teal,
+          fillOpacity: 1,
+        });
+        if (item.label) dot.bindTooltip(item.label);
+        group.addLayer(dot);
+      });
+      if (routeBetween && points.length > 1) {
+        group.addLayer(L.polyline(points, {
+          color: "#17252B", weight: 2, opacity: 0.7, dashArray: "6 8",
+        }));
+      }
+      group.addTo(map);
+      markerLayer = group;
+      if (fit && points.length > 1) {
+        map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 16 });
+      } else if (points.length === 1) {
+        map.setView(points[0], 14, { animate: true });
+      }
+    };
     // Signal readiness so RN can push the initial pin.
     if (window.ReactNativeWebView) {
       window.ReactNativeWebView.postMessage("map-ready");
@@ -53,15 +89,37 @@ const hasCoords = (latitude, longitude) =>
   !Number.isNaN(longitude);
 
 // Module-scope component (never define components inside components).
-// Renders a live Leaflet/OpenStreetMap card; while there are no coordinates it
-// shows a friendly placeholder instead of an empty map.
-const LeafletMap = ({ latitude, longitude, label, height = 160, zoom = 16 }) => {
+// Two modes, chosen by props:
+//  - single pin: latitude/longitude/label (vendor onboarding — unchanged), or
+//  - markers: [{latitude, longitude, label, color}] with optional routeBetween
+//    (dashed polyline in order) and fit (fitBounds with padding).
+const LeafletMap = ({
+  latitude,
+  longitude,
+  label,
+  height = 160,
+  zoom = 16,
+  markers,
+  routeBetween = false,
+  fit = false,
+  style,
+}) => {
   const webViewRef = useRef(null);
   const readyRef = useRef(false);
+  const markerMode = Array.isArray(markers);
   const pinned = hasCoords(latitude, longitude);
 
   const pushPin = () => {
     if (!readyRef.current || !webViewRef.current) return;
+    if (markerMode) {
+      const valid = markers.filter((item) => hasCoords(item.latitude, item.longitude));
+      webViewRef.current.injectJavaScript(
+        `window.setMarkers(${JSON.stringify(valid)}, ${routeBetween ? "true" : "false"}, ${
+          fit ? "true" : "false"
+        }); true;`,
+      );
+      return;
+    }
     if (!hasCoords(latitude, longitude)) return;
     webViewRef.current.injectJavaScript(
       `window.setPin(${latitude}, ${longitude}, ${JSON.stringify(label || "")}, ${zoom}); true;`,
@@ -71,11 +129,13 @@ const LeafletMap = ({ latitude, longitude, label, height = 160, zoom = 16 }) => 
   useEffect(() => {
     pushPin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [latitude, longitude, label, zoom]);
+  }, [latitude, longitude, label, zoom, JSON.stringify(markers), routeBetween, fit]);
 
-  if (!pinned) {
+  // Marker mode always renders the live map (Nigeria overview while geocoding);
+  // the single-pin path keeps its friendly placeholder until coords exist.
+  if (!pinned && !markerMode) {
     return (
-      <View style={[styles.card, styles.placeholder, { height }]}>
+      <View style={[styles.card, styles.placeholder, { height }, style]}>
         <View style={styles.placeholderPin}>
           <Ionicons name="location" size={22} color={COLORS.teal} />
         </View>
@@ -85,7 +145,7 @@ const LeafletMap = ({ latitude, longitude, label, height = 160, zoom = 16 }) => 
   }
 
   return (
-    <View style={[styles.card, { height }]}>
+    <View style={[styles.card, { height }, style]}>
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}

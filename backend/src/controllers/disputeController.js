@@ -9,6 +9,7 @@ const DISPUTE_REASONS = [
   "Wrong item",
   "Not as described",
   "Size / fit issue",
+  "Other",
 ];
 
 const httpError = (statusCode, message) => {
@@ -119,6 +120,37 @@ const listVendorDisputes = async (req, res, next) => {
   }
 };
 
+// Buyer's own disputes ("Returns" tab), enriched with product info from the
+// order — same shape as the vendor list.
+const listBuyerDisputes = async (req, res, next) => {
+  try {
+    const disputes = await Dispute.findAll({
+      where: { buyerId: req.user.id },
+      order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: Order,
+          as: "order",
+          attributes: ["id", "orderNo", "productName", "productImageUrl", "quantity", "createdAt"],
+        },
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      disputes: disputes.map((dispute) => ({
+        ...serializeDispute(dispute),
+        productName: dispute.order?.productName || "Order item",
+        productImageUrl: dispute.order?.productImageUrl || null,
+        orderNo: dispute.order?.orderNo || null,
+        quantity: dispute.order?.quantity || 1,
+      })),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getDispute = async (req, res, next) => {
   try {
     const dispute = await Dispute.findByPk(req.params.id, {
@@ -167,4 +199,10 @@ const getDispute = async (req, res, next) => {
   }
 };
 
-module.exports = { createDispute, listVendorDisputes, getDispute, DISPUTE_REASONS };
+module.exports = {
+  createDispute,
+  listVendorDisputes,
+  listBuyerDisputes,
+  getDispute,
+  DISPUTE_REASONS,
+};

@@ -12,9 +12,10 @@ export const VENDOR_TABS = [
 ];
 
 export const BUYER_TABS = [
-  { key: "home", label: "Home", icon: "home-outline", activeIcon: "home" },
-  { key: "search", label: "Search", icon: "search-outline", activeIcon: "search" },
-  { key: "orders", label: "Orders", icon: "basket-outline", activeIcon: "basket" },
+  { key: "home", label: "Home", icon: "grid-outline", activeIcon: "grid" },
+  { key: "categories", label: "Categories", icon: "apps-outline", activeIcon: "apps" },
+  { key: "orders", label: "Orders", icon: "cube-outline", activeIcon: "cube" },
+  { key: "cart", label: "Cart", icon: "cart-outline", activeIcon: "cart" },
   { key: "profile", label: "Profile", icon: "person-outline", activeIcon: "person" },
 ];
 

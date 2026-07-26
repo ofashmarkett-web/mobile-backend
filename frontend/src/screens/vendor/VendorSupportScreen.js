@@ -49,14 +49,20 @@ const VendorSupportScreen = ({ navigation }) => {
   const store = useFetch(() => vendorApi.store(token), [token]);
   const [feedback, setFeedback] = useState("");
 
-  const storeHandle = store.data?.store?.storeHandle || "vendor";
-  const supportSubject = `O-Fash vendor support — ${storeHandle}`;
+  // This screen is also reached by buyers (BuyerSupport route), who have no
+  // vendor store — omit the handle from the subject when it's absent.
+  const storeHandle = store.data?.store?.storeHandle;
+  const supportSubject = storeHandle
+    ? `O-Fash vendor support — ${storeHandle}`
+    : "O-Fash support";
 
   const emailSupport = () =>
     openLink(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(supportSubject)}`);
 
   const sendFeedback = () => {
-    const subject = `O-Fash vendor feedback — ${storeHandle}`;
+    const subject = storeHandle
+      ? `O-Fash vendor feedback — ${storeHandle}`
+      : "O-Fash feedback";
     openLink(
       `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
         feedback.trim(),

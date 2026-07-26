@@ -25,4 +25,7 @@ router.post("/:id/delivered", protect, requireRole("rider"), orderController.mar
 // Buyer confirms receipt
 router.post("/:id/confirm", protect, requireRole("buyer"), orderController.confirmDelivery);
 
+// Buyer edits delivery address (only before the order starts moving)
+router.patch("/:id/address", protect, requireRole("buyer"), orderController.updateDeliveryAddress);
+
 module.exports = router;

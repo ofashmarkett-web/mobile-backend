@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -34,6 +35,7 @@ const CacChip = () => (
 const ProductDetailScreen = ({ navigation, route }) => {
   const { productId } = route.params;
   const token = useUserStore((state) => state.token);
+  const addToCart = useUserStore((state) => state.addToCart);
   const detail = useFetch(() => buyerApi.product(token, productId), [token, productId]);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(null);
@@ -151,7 +153,13 @@ const ProductDetailScreen = ({ navigation, route }) => {
           </View>
 
           {store ? (
-            <View style={styles.storeCard}>
+            <TouchableOpacity
+              style={styles.storeCard}
+              activeOpacity={0.8}
+              onPress={() =>
+                navigation.navigate("VendorStore", { vendorId: store.vendorId })
+              }
+            >
               {store.storeLogoUrl ? (
                 <ProductThumb uri={store.storeLogoUrl} size={42} radius={21} />
               ) : (
@@ -172,7 +180,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
                     : "New store"}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ) : null}
 
           {reviews.length > 0 ? (
@@ -197,18 +205,29 @@ const ProductDetailScreen = ({ navigation, route }) => {
           <Text style={styles.footerPrice}>{naira(unitPrice * quantity)}</Text>
         </View>
         <PrimaryButton
-          label="Buy now"
+          label="Add to cart"
           style={{ flex: 1, marginLeft: 16 }}
           disabled={!canBuy}
-          onPress={() =>
-            navigation.navigate("CheckoutEscrow", {
-              product,
-              store,
+          onPress={() => {
+            addToCart({
+              productId: product.id,
+              name: product.name,
+              imageUrl: (product.images || [])[0] || null,
+              unitPrice,
               size,
               quantity,
-              unitPrice,
-            })
-          }
+              stockQuantity: product.stockQuantity,
+              vendorName: store?.businessName || "",
+            });
+            Alert.alert("Added to cart", `${product.name} is now in your cart.`, [
+              { text: "Keep shopping", style: "cancel" },
+              {
+                text: "Go to cart",
+                onPress: () =>
+                  navigation.navigate("BuyerDashboard", { initialTab: "cart" }),
+              },
+            ]);
+          }}
         />
       </View>
     </SafeAreaView>

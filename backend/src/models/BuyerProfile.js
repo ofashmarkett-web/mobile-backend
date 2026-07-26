@@ -11,6 +11,10 @@ const BuyerProfile = sequelize.define(
     gender: { type: DataTypes.STRING(24) },
     referral: { type: DataTypes.STRING(160) },
     defaultAddress: { type: DataTypes.TEXT, field: "default_address" },
+    // Saved only when the buyer taps "Allow location access" — powers the
+    // distance-based "Near You" vendor tag.
+    latitude: { type: DataTypes.DECIMAL(10, 7) },
+    longitude: { type: DataTypes.DECIMAL(10, 7) },
     onboardingStatus: {
       type: DataTypes.ENUM("draft", "submitted", "active"),
       defaultValue: "draft",

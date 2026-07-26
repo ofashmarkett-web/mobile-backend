@@ -12,5 +12,6 @@ router.patch("/me", protect, requireRole("buyer"), buyerController.updateMyProfi
 router.get("/marketplace/products", protect, buyerController.browseProducts);
 router.get("/marketplace/products/:id", protect, buyerController.getBuyerProduct);
 router.get("/marketplace/vendors", protect, buyerController.recommendedVendors);
+router.get("/marketplace/store/:vendorId", protect, buyerController.getStorePage);
 
 module.exports = router;

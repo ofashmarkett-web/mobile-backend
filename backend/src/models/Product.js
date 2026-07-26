@@ -20,6 +20,9 @@ const Product = sequelize.define(
     sizes: { type: DataTypes.JSONB, defaultValue: [] },
     stockQuantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: "stock_quantity" },
     lowStockThreshold: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 2, field: "low_stock_threshold" },
+    // Optional colour names picked by the vendor (e.g. "Black", "Multicolour")
+    // so buyers can filter the marketplace by colour.
+    colours: { type: DataTypes.JSONB, defaultValue: [] },
     occasionTags: { type: DataTypes.JSONB, defaultValue: [], field: "occasion_tags" },
     styleTags: { type: DataTypes.JSONB, defaultValue: [], field: "style_tags" },
     customTags: { type: DataTypes.JSONB, defaultValue: [], field: "custom_tags" },

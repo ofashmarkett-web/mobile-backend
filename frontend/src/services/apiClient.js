@@ -157,6 +157,8 @@ export const orderApi = {
   ready: (token, id, payload) =>
     request(`/orders/${id}/ready`, { method: "POST", token, body: payload }),
   cancelReady: (token, id) => request(`/orders/${id}/cancel-ready`, { method: "POST", token }),
+  updateAddress: (token, id, payload) =>
+    request(`/orders/${id}/address`, { method: "PATCH", token, body: payload }),
 };
 
 const query = (params = {}) => {
@@ -172,6 +174,7 @@ export const buyerApi = {
   browse: (token, params) => request(`/buyers/marketplace/products${query(params)}`, { token }),
   product: (token, id) => request(`/buyers/marketplace/products/${id}`, { token }),
   vendors: (token) => request("/buyers/marketplace/vendors", { token }),
+  store: (token, vendorId) => request(`/buyers/marketplace/store/${vendorId}`, { token }),
   orders: (token) => request("/orders/buyer", { token }),
   placeOrder: (token, payload) => request("/orders", { method: "POST", token, body: payload }),
   confirmDelivery: (token, id) => request(`/orders/${id}/confirm`, { method: "POST", token }),
@@ -181,7 +184,13 @@ export const buyerApi = {
 export const disputeApi = {
   create: (token, payload) => request("/disputes", { method: "POST", token, body: payload }),
   vendorList: (token, state = "active") => request(`/disputes/vendor?state=${state}`, { token }),
+  buyerList: (token) => request("/disputes/buyer", { token }),
   get: (token, id) => request(`/disputes/${id}`, { token }),
+};
+
+export const reviewApi = {
+  create: (token, payload) => request("/reviews", { method: "POST", token, body: payload }),
+  mine: (token) => request("/reviews/mine", { token }),
 };
 
 export const uploadApi = {
