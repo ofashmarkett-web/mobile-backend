@@ -13,6 +13,8 @@ import VendorPersonalInfoScreen from "../screens/vendor/VendorPersonalInfoScreen
 import VendorSupportScreen from "../screens/vendor/VendorSupportScreen";
 import VendorPrivacyScreen from "../screens/vendor/VendorPrivacyScreen";
 import VendorTermsScreen from "../screens/vendor/VendorTermsScreen";
+// Shared with the buyer side: pickup→delivery map, generic over the order.
+import TrackOrderScreen from "../screens/buyer/TrackOrderScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -64,6 +66,7 @@ const VendorNavigator = () => (
     <Stack.Screen name="VendorSupport" component={VendorSupportScreen} />
     <Stack.Screen name="VendorPrivacy" component={VendorPrivacyScreen} />
     <Stack.Screen name="VendorTerms" component={VendorTermsScreen} />
+    <Stack.Screen name="VendorTrackOrder" component={TrackOrderScreen} />
   </Stack.Navigator>
 );
 

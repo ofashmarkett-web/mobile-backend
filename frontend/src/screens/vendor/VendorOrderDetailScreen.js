@@ -430,12 +430,7 @@ const VendorOrderDetailScreen = ({ navigation, route }) => {
         {order.status === "shipped" ? (
           <PrimaryButton
             label="Track order"
-            onPress={() =>
-              Alert.alert(
-                "Live tracking",
-                "Rider live-location tracking arrives with the delivery milestone.",
-              )
-            }
+            onPress={() => navigation.navigate("VendorTrackOrder", { orderId: order.id })}
           />
         ) : null}
       </View>
