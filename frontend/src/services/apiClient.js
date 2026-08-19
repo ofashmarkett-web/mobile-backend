@@ -208,4 +208,11 @@ export const notificationApi = {
   updateRiderLocation: (token, payload) => request("/notifications/rider-location", { method: "POST", token, body: payload }),
 };
 
+export const chatApi = {
+  rooms: (token) => request("/chat/rooms", { token }),
+  createRoom: (token, payload) => request("/chat/rooms", { method: "POST", token, body: payload }),
+  messages: (token, roomId) => request(`/chat/rooms/${roomId}/messages`, { token }),
+  send: (token, roomId, body) => request(`/chat/rooms/${roomId}/messages`, { method: "POST", token, body: { body } }),
+};
+
 export default request;

@@ -15,6 +15,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS } from "../../theme/colors";
 import { SHADOWS } from "../../theme/shadows";
 import { buyerApi } from "../../services/apiClient";
+import { chatApi } from "../../services/apiClient";
 import { useUserStore } from "../../store/userStore";
 import { useFetch } from "../../hooks/useFetch";
 import Stars from "../../components/vendor/Stars";
@@ -76,11 +77,14 @@ const VendorStorePage = ({ navigation, route }) => {
 
   const { store, description = "", stats = {}, reviews = [], products = [] } = page.data || {};
 
-  const sendMessage = () =>
-    Alert.alert(
-      "Chat",
-      "In-app chat arrives with the next milestone — for your protection, keep all communication on O-Fash.",
-    );
+  const sendMessage = async () => {
+    try {
+      const result = await chatApi.createRoom(token, { vendorId });
+      navigation.navigate("BuyerChat", { roomId: result.room.id });
+    } catch (error) {
+      Alert.alert("Could not open chat", error.message);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.flex} edges={["top"]}>

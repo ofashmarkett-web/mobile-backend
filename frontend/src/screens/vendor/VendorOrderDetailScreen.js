@@ -305,12 +305,7 @@ const VendorOrderDetailScreen = ({ navigation, route }) => {
           <Text style={styles.buyerName}>{order.buyerName}</Text>
           <TouchableOpacity
             style={styles.messageButton}
-            onPress={() =>
-              Alert.alert(
-                "Order chat",
-                "Order-linked chat is the next milestone on the roadmap — it will open right here.",
-              )
-            }
+            onPress={() => navigation.navigate("VendorChat", { orderId: order.id })}
           >
             <Text style={styles.messageText}>Message</Text>
           </TouchableOpacity>

@@ -9,6 +9,7 @@ import DisputesScreen from "../screens/vendor/DisputesScreen";
 import DisputeDetailScreen from "../screens/vendor/DisputeDetailScreen";
 import VendorOnboardingStepScreen from "../screens/vendor/VendorOnboardingStepScreen";
 import VendorNotificationsScreen from "../screens/vendor/VendorNotificationsScreen";
+import InAppChatScreen from "../screens/common/InAppChatScreen";
 import VendorPersonalInfoScreen from "../screens/vendor/VendorPersonalInfoScreen";
 import VendorSupportScreen from "../screens/vendor/VendorSupportScreen";
 import VendorPrivacyScreen from "../screens/vendor/VendorPrivacyScreen";
@@ -62,6 +63,7 @@ const VendorNavigator = () => (
     <Stack.Screen name="VendorDisputes" component={DisputesScreen} />
     <Stack.Screen name="VendorDisputeDetail" component={DisputeDetailScreen} />
     <Stack.Screen name="VendorNotifications" component={VendorNotificationsScreen} />
+    <Stack.Screen name="VendorChat" component={InAppChatScreen} />
     <Stack.Screen name="VendorPersonalInfo" component={VendorPersonalInfoScreen} />
     <Stack.Screen name="VendorSupport" component={VendorSupportScreen} />
     <Stack.Screen name="VendorPrivacy" component={VendorPrivacyScreen} />

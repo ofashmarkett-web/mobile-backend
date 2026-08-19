@@ -30,6 +30,9 @@ const Dispute = require("./src/models/Dispute");
 const Notification = require("./src/models/Notification");
 const DeviceToken = require("./src/models/DeviceToken");
 const VendorFavorite = require("./src/models/VendorFavorite");
+const ChatRoom = require("./src/models/ChatRoom");
+const ChatMessage = require("./src/models/ChatMessage");
+const chatRoutes = require("./src/routes/chatRoutes");
 
 const app = express();
 // Render terminates TLS and forwards client IPs through X-Forwarded-For.
@@ -56,6 +59,13 @@ User.hasMany(VendorFavorite, { foreignKey: "buyerId", as: "favoriteVendors" });
 VendorFavorite.belongsTo(User, { foreignKey: "buyerId", as: "buyer" });
 User.hasMany(VendorFavorite, { foreignKey: "vendorId", as: "followers" });
 VendorFavorite.belongsTo(User, { foreignKey: "vendorId", as: "vendor" });
+User.hasMany(ChatRoom, { foreignKey: "buyerId", as: "buyerChats" });
+User.hasMany(ChatRoom, { foreignKey: "vendorId", as: "vendorChats" });
+ChatRoom.belongsTo(User, { foreignKey: "buyerId", as: "buyer" });
+ChatRoom.belongsTo(User, { foreignKey: "vendorId", as: "vendor" });
+ChatRoom.hasMany(ChatMessage, { foreignKey: "roomId", as: "messages" });
+ChatMessage.belongsTo(ChatRoom, { foreignKey: "roomId", as: "room" });
+ChatMessage.belongsTo(User, { foreignKey: "senderId", as: "sender" });
 Product.hasMany(ProductView, { foreignKey: "productId", as: "views" });
 ProductView.belongsTo(Product, { foreignKey: "productId", as: "product" });
 Order.belongsTo(User, { foreignKey: "buyerId", as: "buyer" });
@@ -121,6 +131,7 @@ app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/uploads", uploadRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/buyers/favorites", favoriteRoutes);
+app.use("/api/v1/chat", chatRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use((req, res) => {
@@ -188,6 +199,27 @@ const start = async () => {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (buyer_id, vendor_id)
     );
+    CREATE TABLE IF NOT EXISTS chat_rooms (
+      id UUID PRIMARY KEY,
+      buyer_id UUID NOT NULL,
+      vendor_id UUID NOT NULL,
+      product_id UUID,
+      order_id UUID,
+      last_message_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id UUID PRIMARY KEY,
+      room_id UUID NOT NULL,
+      sender_id UUID NOT NULL,
+      body TEXT NOT NULL,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS chat_messages_room_created_idx
+      ON chat_messages (room_id, created_at ASC);
   `);
 
   if (process.env.DB_SYNC === "true") {

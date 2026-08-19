@@ -1,0 +1,2 @@
+const { Router } = require("express"); const { protect } = require("../middleware/auth"); const { requireRole } = require("../middleware/roleCheck"); const controller = require("../controllers/chatController");
+const router = Router(); router.use(protect, requireRole("buyer", "vendor")); router.get("/rooms", controller.listRooms); router.post("/rooms", controller.createRoom); router.get("/rooms/:id/messages", controller.listMessages); router.post("/rooms/:id/messages", controller.sendMessage); module.exports = router;
