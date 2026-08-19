@@ -151,6 +151,45 @@ app.use((error, req, res, next) => {
 const start = async () => {
   await sequelize.authenticate();
 
+  // Keep deployments safe when DB_SYNC is disabled. These additive changes
+  // are required by the current order/rider and notification code and can be
+  // applied repeatedly without affecting existing data.
+  await sequelize.query(`
+    ALTER TABLE IF EXISTS orders ADD COLUMN IF NOT EXISTS pickup_latitude DECIMAL(10,7);
+    ALTER TABLE IF EXISTS orders ADD COLUMN IF NOT EXISTS pickup_longitude DECIMAL(10,7);
+    CREATE TABLE IF NOT EXISTS notifications (
+      id UUID PRIMARY KEY,
+      recipient_user_id UUID NOT NULL,
+      type VARCHAR(80) NOT NULL,
+      title VARCHAR(180) NOT NULL,
+      body TEXT NOT NULL,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS notifications_recipient_created_idx
+      ON notifications (recipient_user_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL,
+      expo_push_token VARCHAR(255) NOT NULL UNIQUE,
+      platform VARCHAR(20),
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS vendor_favorites (
+      id UUID PRIMARY KEY,
+      buyer_id UUID NOT NULL,
+      vendor_id UUID NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (buyer_id, vendor_id)
+    );
+  `);
+
   if (process.env.DB_SYNC === "true") {
     await sequelize.sync({ alter: true });
   }
