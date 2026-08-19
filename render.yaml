@@ -27,6 +27,8 @@ services:
       - key: VENDOR_VERIFICATION_ENFORCED
         value: "false"
       # Paste these secret values in the Render dashboard (never in git):
+      # DATABASE_URL must be the complete URI from your database provider's
+      # Connect panel. Percent-encode reserved password characters (@, /, :, #).
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

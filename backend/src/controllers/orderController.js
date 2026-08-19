@@ -7,6 +7,7 @@ const BuyerProfile = require("../models/BuyerProfile");
 const VendorProfile = require("../models/VendorProfile");
 const Dispute = require("../models/Dispute");
 const { generateCode, generateUniqueOrderNo } = require("../utils/generateUniqueCode");
+const { create, orderEvent } = require("../services/notificationService");
 
 const RELEASE_WINDOW_HOURS = Number(process.env.ESCROW_RELEASE_HOURS || 2);
 const PLATFORM_FEE_PCT = Number(process.env.PLATFORM_FEE_PCT || 5);
@@ -225,6 +226,9 @@ const createOrder = async (req, res, next) => {
       deliveryAddress: String(deliveryAddress).trim(),
     });
 
+    await create({ recipientUserId: order.buyerId, type: "order_created", title: "Order confirmed", body: `${order.productName} is waiting for the vendor to accept.`, data: { orderId: order.id, orderNo: order.orderNo } });
+    await create({ recipientUserId: order.vendorId, type: "new_order", title: "New order received", body: `${order.productName} has been paid for and is waiting for your acceptance.`, data: { orderId: order.id, orderNo: order.orderNo } });
+
     return res.status(201).json({ success: true, order: serializeOrder(order) });
   } catch (error) {
     return next(error);
@@ -239,8 +243,10 @@ const transition = (allowedFrom, apply) => async (req, res, next) => {
       throw httpError(409, `This action is not available while the order is ${order.status}`);
     }
 
+    const previousStatus = order.status;
     await apply(order, req);
     await order.reload({ include: [buyerInclude] });
+    await orderEvent(order, previousStatus, order.status);
 
     return res.status(200).json({ success: true, order: serializeOrder(order) });
   } catch (error) {

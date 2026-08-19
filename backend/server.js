@@ -16,6 +16,8 @@ const orderRoutes = require("./src/routes/orderRoutes");
 const disputeRoutes = require("./src/routes/disputeRoutes");
 const reviewRoutes = require("./src/routes/reviewRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
+const notificationRoutes = require("./src/routes/notificationRoutes");
+const favoriteRoutes = require("./src/routes/favoriteRoutes");
 const User = require("./src/models/User");
 const BuyerProfile = require("./src/models/BuyerProfile");
 const VendorProfile = require("./src/models/VendorProfile");
@@ -25,8 +27,13 @@ const ProductView = require("./src/models/ProductView");
 const Order = require("./src/models/Order");
 const Review = require("./src/models/Review");
 const Dispute = require("./src/models/Dispute");
+const Notification = require("./src/models/Notification");
+const DeviceToken = require("./src/models/DeviceToken");
+const VendorFavorite = require("./src/models/VendorFavorite");
 
 const app = express();
+// Render terminates TLS and forwards client IPs through X-Forwarded-For.
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 const allowedOrigins = (process.env.CORS_ORIGIN || "*")
   .split(",")
@@ -41,6 +48,14 @@ RiderProfile.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 User.hasMany(Product, { foreignKey: "vendorId", as: "products" });
 Product.belongsTo(User, { foreignKey: "vendorId", as: "vendor" });
+User.hasMany(Notification, { foreignKey: "recipientUserId", as: "notifications" });
+Notification.belongsTo(User, { foreignKey: "recipientUserId", as: "recipient" });
+User.hasMany(DeviceToken, { foreignKey: "userId", as: "deviceTokens" });
+DeviceToken.belongsTo(User, { foreignKey: "userId", as: "user" });
+User.hasMany(VendorFavorite, { foreignKey: "buyerId", as: "favoriteVendors" });
+VendorFavorite.belongsTo(User, { foreignKey: "buyerId", as: "buyer" });
+User.hasMany(VendorFavorite, { foreignKey: "vendorId", as: "followers" });
+VendorFavorite.belongsTo(User, { foreignKey: "vendorId", as: "vendor" });
 Product.hasMany(ProductView, { foreignKey: "productId", as: "views" });
 ProductView.belongsTo(Product, { foreignKey: "productId", as: "product" });
 Order.belongsTo(User, { foreignKey: "buyerId", as: "buyer" });
@@ -104,6 +119,8 @@ app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/disputes", disputeRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/uploads", uploadRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/buyers/favorites", favoriteRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use((req, res) => {

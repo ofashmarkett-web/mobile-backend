@@ -41,6 +41,8 @@ const Order = sequelize.define(
     },
     pickupCode: { type: DataTypes.STRING(16), field: "pickup_code" },
     pickupAddress: { type: DataTypes.TEXT, field: "pickup_address" },
+    pickupLatitude: { type: DataTypes.DECIMAL(10, 7), field: "pickup_latitude" },
+    pickupLongitude: { type: DataTypes.DECIMAL(10, 7), field: "pickup_longitude" },
     deliveryAddress: { type: DataTypes.TEXT, field: "delivery_address" },
     acceptedAt: { type: DataTypes.DATE, field: "accepted_at" },
     packedAt: { type: DataTypes.DATE, field: "packed_at" },

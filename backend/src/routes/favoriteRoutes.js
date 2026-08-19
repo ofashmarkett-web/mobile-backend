@@ -1,0 +1,2 @@
+const { Router } = require("express"); const { protect } = require("../middleware/auth"); const { requireRole } = require("../middleware/roleCheck"); const controller = require("../controllers/favoriteController");
+const router = Router(); router.use(protect, requireRole("buyer")); router.get("/", controller.list); router.post("/:vendorId", controller.add); router.delete("/:vendorId", controller.remove); module.exports = router;

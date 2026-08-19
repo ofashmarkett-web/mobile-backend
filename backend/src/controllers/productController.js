@@ -5,6 +5,7 @@ const Review = require("../models/Review");
 const User = require("../models/User");
 const BuyerProfile = require("../models/BuyerProfile");
 const VendorProfile = require("../models/VendorProfile");
+const { notifyFollowers } = require("./favoriteController");
 
 const httpError = (statusCode, message) => {
   const error = new Error(message);
@@ -132,6 +133,7 @@ const createProduct = async (req, res, next) => {
   try {
     const payload = productPayload(req.body);
     const product = await Product.create({ ...payload, vendorId: req.user.id });
+    await notifyFollowers(req.user.id, product);
 
     return res.status(201).json({ success: true, product: serializeProduct(product) });
   } catch (error) {

@@ -1,0 +1,11 @@
+const { Router } = require("express");
+const { protect } = require("../middleware/auth");
+const controller = require("../controllers/notificationController");
+const router = Router();
+router.use(protect);
+router.get("/", controller.list);
+router.post("/devices", controller.registerDevice);
+router.post("/rider-location", controller.updateRiderLocation);
+router.post("/read-all", controller.markAllRead);
+router.post("/:id/read", controller.markRead);
+module.exports = router;

@@ -1,0 +1,10 @@
+const VendorFavorite = require("../models/VendorFavorite");
+const User = require("../models/User");
+const VendorProfile = require("../models/VendorProfile");
+const { create } = require("../services/notificationService");
+const httpError = (status, message) => Object.assign(new Error(message), { statusCode: status });
+const add = async (req, res, next) => { try { const vendor = await User.findOne({ where: { id: req.params.vendorId, role: "vendor" } }); if (!vendor) throw httpError(404, "Vendor not found"); const [favorite] = await VendorFavorite.findOrCreate({ where: { buyerId: req.user.id, vendorId: vendor.id } }); return res.status(201).json({ success: true, favorite }); } catch (e) { return next(e); } };
+const remove = async (req, res, next) => { try { await VendorFavorite.destroy({ where: { buyerId: req.user.id, vendorId: req.params.vendorId } }); return res.json({ success: true }); } catch (e) { return next(e); } };
+const list = async (req, res, next) => { try { const favorites = await VendorFavorite.findAll({ where: { buyerId: req.user.id }, include: [{ model: User, as: "vendor", include: [{ model: VendorProfile, as: "vendorProfile" }] }] }); return res.json({ success: true, favorites }); } catch (e) { return next(e); } };
+const notifyFollowers = async (vendorId, product) => { const followers = await VendorFavorite.findAll({ where: { vendorId }, attributes: ["buyerId"] }); await Promise.all(followers.map(({ buyerId }) => create({ recipientUserId: buyerId, type: "favorite_vendor_product", title: "A favorite vendor posted", body: `New item from your favorite vendor: ${product.name}.`, data: { vendorId, productId: product.id } }))); };
+module.exports = { add, remove, list, notifyFollowers };
