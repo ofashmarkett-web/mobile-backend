@@ -1,5 +1,8 @@
 import React from "react";
 import { StatusBar } from "expo-status-bar";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import Constants from "expo-constants";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -22,6 +25,12 @@ applyMontserrat();
 
 import AppNavigator, { navigationRef } from "./src/navigation/AppNavigator";
 import { COLORS } from "./src/theme/colors";
+import { notificationApi } from "./src/services/apiClient";
+import { useUserStore } from "./src/store/userStore";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: true }),
+});
 
 // Define the theme to be used by React Native Paper components
 const theme = {
@@ -44,6 +53,23 @@ export default function App() {
     Montserrat_800ExtraBold,
     Montserrat_900Black,
   });
+  const token = useUserStore((state) => state.token);
+
+  React.useEffect(() => {
+    if (!token || !Device.isDevice) return undefined;
+    let cancelled = false;
+    (async () => {
+      const permissions = await Notifications.getPermissionsAsync();
+      let status = permissions.status;
+      if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
+      if (status !== "granted" || cancelled) return;
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      if (!projectId) return;
+      const pushToken = await Notifications.getExpoPushTokenAsync({ projectId });
+      await notificationApi.registerDevice(token, { expoPushToken: pushToken.data, platform: Device.osName });
+    })().catch(() => {});
+    return () => { cancelled = true; };
+  }, [token]);
 
   // Keep the splash/blank state until the Montserrat faces are available so
   // no screen ever renders with a fallback font.

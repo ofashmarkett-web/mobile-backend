@@ -1,13 +1,11 @@
-import React from "react";
-import WorkspaceScreen from "../common/WorkspaceScreen";
+import React, { useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../../theme/colors";
+import { DeliveryCard, RIDES, RiderHeader, RiderTabs } from "./RiderUi";
 
-const AvailableRidesScreen = ({ navigation }) => (
-  <WorkspaceScreen
-    navigation={navigation}
-    nodeId="147-3132"
-    title="Available rides"
-    subtitle="Review pickup distance, delivery payout, package details, and route fit."
-  />
-);
+const FILTERS = ["All (3)", "Pending (1)", "Active (1)", "Completed (1)"];
+const AvailableRidesScreen = ({ navigation }) => { const [filter, setFilter] = useState(0); const rides = useMemo(() => filter === 0 ? RIDES : RIDES.filter((ride) => ride.status === ["", "Pending", "Active", "Completed"][filter]), [filter]); return <SafeAreaView style={styles.safe}><RiderHeader title="DELIVERIES" /><View style={styles.content}><Text style={styles.title}>Deliveries</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{FILTERS.map((label, index) => <Text key={label} onPress={() => setFilter(index)} style={[styles.filter, filter === index && styles.filterActive]}>{label}</Text>)}</ScrollView><ScrollView showsVerticalScrollIndicator={false}>{rides.length ? rides.map((ride) => <DeliveryCard key={ride.id} ride={ride} onPress={() => navigation.navigate("MapNavigation", { ride })} />) : <View style={styles.empty}><Text style={styles.emptyIcon}>□</Text><Text style={styles.emptyTitle}>No deliveries yet</Text><Text style={styles.emptyCopy}>There are no deliveries assigned to you at the moment.</Text></View>}</ScrollView></View><RiderTabs active="Deliveries" navigation={navigation} /></SafeAreaView>; };
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: "#F8FAFA" }, content: { flex: 1, paddingHorizontal: 17 }, title: { color: COLORS.ink, fontSize: 12, fontWeight: "800", marginTop: 9 }, filters: { gap: 8, paddingVertical: 16 }, filter: { color: COLORS.slate, fontSize: 7, paddingHorizontal: 8, paddingVertical: 5 }, filterActive: { color: COLORS.teal, backgroundColor: COLORS.tealSoft, borderRadius: 10, fontWeight: "800" }, empty: { alignItems: "center", paddingTop: 88 }, emptyIcon: { color: COLORS.line, fontSize: 60 }, emptyTitle: { color: COLORS.ink, fontSize: 10, fontWeight: "800", marginTop: 12 }, emptyCopy: { color: COLORS.muted, fontSize: 7, marginTop: 6, textAlign: "center" } });
 
 export default AvailableRidesScreen;

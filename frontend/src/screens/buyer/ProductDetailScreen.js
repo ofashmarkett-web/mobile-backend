@@ -21,6 +21,7 @@ import Stars from "../../components/vendor/Stars";
 import ProductThumb from "../../components/vendor/ProductThumb";
 import PrimaryButton from "../../components/vendor/PrimaryButton";
 import { naira, priceLabel } from "../../utils/format";
+import { resolveMediaUrl } from "../../config/api";
 
 const { width } = Dimensions.get("window");
 
@@ -81,7 +82,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
               }
             >
               {images.map((uri) => (
-                <Image key={uri} source={{ uri }} style={styles.hero} resizeMode="cover" />
+                <Image key={uri} source={{ uri: resolveMediaUrl(uri) }} style={styles.hero} resizeMode="cover" />
               ))}
             </ScrollView>
           ) : (

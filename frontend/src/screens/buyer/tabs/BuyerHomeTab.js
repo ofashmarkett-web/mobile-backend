@@ -207,12 +207,7 @@ const BuyerHomeTab = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.headerIcon}
-          onPress={() =>
-            Alert.alert(
-              "Notifications",
-              "Notifications for buyers arrive with the next milestone.",
-            )
-          }
+          onPress={() => navigation.navigate("BuyerNotifications")}
         >
           <Ionicons name="notifications-outline" size={18} color={COLORS.ink} />
         </TouchableOpacity>

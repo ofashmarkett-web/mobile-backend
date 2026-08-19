@@ -13,6 +13,7 @@ import TrackOrderScreen from "../screens/buyer/TrackOrderScreen";
 import DeliveryCodeScreen from "../screens/buyer/DeliveryCodeScreen";
 import RefundInitiationScreen from "../screens/buyer/RefundInitiationScreen";
 import BuyerPersonalInfoScreen from "../screens/buyer/BuyerPersonalInfoScreen";
+import BuyerNotificationsScreen from "../screens/buyer/BuyerNotificationsScreen";
 // The support/privacy/terms screens are generic — reused from the vendor side.
 import VendorSupportScreen from "../screens/vendor/VendorSupportScreen";
 import VendorPrivacyScreen from "../screens/vendor/VendorPrivacyScreen";
@@ -34,6 +35,7 @@ const BuyerNavigator = () => (
     <Stack.Screen name="DeliveryCode" component={DeliveryCodeScreen} />
     <Stack.Screen name="RefundInitiation" component={RefundInitiationScreen} />
     <Stack.Screen name="BuyerPersonalInfo" component={BuyerPersonalInfoScreen} />
+    <Stack.Screen name="BuyerNotifications" component={BuyerNotificationsScreen} />
     <Stack.Screen name="BuyerSupport" component={VendorSupportScreen} />
     <Stack.Screen name="BuyerPrivacy" component={VendorPrivacyScreen} />
     <Stack.Screen name="BuyerTerms" component={VendorTermsScreen} />

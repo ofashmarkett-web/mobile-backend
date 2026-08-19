@@ -1,13 +1,15 @@
-import React from "react";
-import WorkspaceScreen from "../common/WorkspaceScreen";
+import React, { useState } from "react";
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../../theme/colors";
+import { RiderHeader } from "./RiderUi";
 
-const DeliveryVerificationScreen = ({ navigation }) => (
-  <WorkspaceScreen
-    navigation={navigation}
-    nodeId="147-3010"
-    title="Delivery verification"
-    subtitle="Validate pickup and dropoff codes before escrow release."
-  />
-);
+const DeliveryVerificationScreen = ({ navigation, route }) => {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState(false);
+  const confirm = () => { if (code.length < 6) return setError(true); Alert.alert("Pickup confirmed", "You can now begin the delivery.", [{ text: "Continue", onPress: () => navigation.navigate("AvailableRides") }]); };
+  return <SafeAreaView style={styles.safe}><RiderHeader title="HEAD TO PICKUP ADDRESS" back onBack={() => navigation.goBack()} /><View style={styles.backdrop}><Text style={styles.mapHint}>Pickup point secured</Text></View><Modal transparent animationType="slide" visible><View style={styles.modalShade}><View style={styles.sheet}><View style={styles.handle} /><Text style={styles.title}>Enter the pickup code</Text><Text style={styles.copy}>The vendor will give you this code when you arrive. It confirms you’re collecting the right clothes.</Text><Text style={styles.label}>OPEN PICKUP CODE</Text><TextInput value={code} onChangeText={(value) => { setCode(value.replace(/\D/g, "")); setError(false); }} placeholder="0FM-7712" placeholderTextColor={COLORS.faint} keyboardType="number-pad" maxLength={6} style={[styles.input, error && styles.inputError]} /><Text style={[styles.error, !error && styles.hidden]}>● Code mismatch. Kindly ask the merchant to try again</Text><View style={styles.actions}><Pressable onPress={() => navigation.goBack()} style={styles.back}><Text style={styles.backText}>Go back</Text></Pressable><Pressable onPress={confirm} style={styles.confirm}><Text style={styles.confirmText}>Confirm pickup</Text></Pressable></View></View></View></Modal></SafeAreaView>;
+};
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: "#E8EFEE" }, backdrop: { flex: 1, alignItems: "center", justifyContent: "center" }, mapHint: { color: "rgba(23,37,43,.35)", fontSize: 10 }, modalShade: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(17,55,57,.45)" }, sheet: { backgroundColor: COLORS.white, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20, paddingBottom: 28 }, handle: { alignSelf: "center", width: 26, height: 3, borderRadius: 2, backgroundColor: COLORS.line, marginBottom: 22 }, title: { color: COLORS.ink, fontSize: 11, fontWeight: "800", textAlign: "center" }, copy: { color: COLORS.slate, fontSize: 7, lineHeight: 10, textAlign: "center", marginTop: 10, paddingHorizontal: 16 }, label: { color: COLORS.muted, fontSize: 6, fontWeight: "800", textAlign: "center", marginTop: 19 }, input: { color: COLORS.ink, textAlign: "center", fontSize: 15, fontWeight: "800", borderBottomWidth: 1, borderColor: COLORS.line, paddingVertical: 8, marginHorizontal: 35 }, inputError: { borderColor: COLORS.red }, error: { color: COLORS.red, fontSize: 6, textAlign: "center", marginTop: 10 }, hidden: { opacity: 0 }, actions: { flexDirection: "row", gap: 9, marginTop: 15 }, back: { flex: 1, height: 35, borderRadius: 18, borderWidth: 1, borderColor: COLORS.teal, alignItems: "center", justifyContent: "center" }, backText: { color: COLORS.teal, fontSize: 8, fontWeight: "800" }, confirm: { flex: 1, height: 35, borderRadius: 18, backgroundColor: "#D43A0B", alignItems: "center", justifyContent: "center" }, confirmText: { color: COLORS.white, fontSize: 8, fontWeight: "800" } });
 
 export default DeliveryVerificationScreen;

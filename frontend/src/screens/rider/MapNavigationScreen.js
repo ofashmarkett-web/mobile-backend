@@ -1,13 +1,14 @@
 import React from "react";
-import WorkspaceScreen from "../common/WorkspaceScreen";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../../theme/colors";
+import { RiderHeader } from "./RiderUi";
 
-const MapNavigationScreen = ({ navigation }) => (
-  <WorkspaceScreen
-    navigation={navigation}
-    nodeId="147-3000"
-    title="Map navigation"
-    subtitle="Follow pickup and dropoff routing for active delivery trips."
-  />
-);
+const MapNavigationScreen = ({ navigation, route }) => {
+  const ride = route.params?.ride;
+  return <SafeAreaView style={styles.safe}><RiderHeader title="HEAD TO PICKUP ADDRESS" back onBack={() => navigation.goBack()} right={<Text style={styles.close}>×</Text>} /><View style={styles.map}><View style={[styles.road, styles.roadOne]} /><View style={[styles.road, styles.roadTwo]} /><View style={styles.route}><View style={styles.routeLine} /><View style={styles.bike}><Ionicons name="bicycle" size={17} color={COLORS.white} /></View><Ionicons name="location" size={31} color={COLORS.teal} /></View></View><View style={styles.sheet}><View style={styles.sheetHandle} /><View style={styles.locationRow}><View style={styles.locationBadge}><Ionicons name="storefront" size={15} color="#D43A0B" /></View><View style={styles.locationCopy}><Text style={styles.locationName}>{ride?.customer || "Aduomo's Closet"}</Text><Text style={styles.locationAddress}>{ride?.address || "22 Bode Thomas, Surulere"}</Text></View><Ionicons name="call" size={15} color={COLORS.teal} /></View><Pressable style={styles.arrived} onPress={() => navigation.navigate("DeliveryVerification", { ride })}><Text style={styles.arrivedText}>I have picked the item</Text></Pressable></View></SafeAreaView>;
+};
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: COLORS.white }, close: { fontSize: 20, color: COLORS.slate }, map: { flex: 1, backgroundColor: "#EDF0EF", overflow: "hidden" }, road: { position: "absolute", backgroundColor: COLORS.white, opacity: 0.9, borderRadius: 8 }, roadOne: { width: 500, height: 13, transform: [{ rotate: "-48deg" }], top: "45%", left: -80 }, roadTwo: { width: 13, height: 600, transform: [{ rotate: "15deg" }], top: -100, left: "48%" }, route: { position: "absolute", top: "32%", left: "32%", alignItems: "center", gap: 19 }, routeLine: { position: "absolute", height: 106, width: 3, borderRadius: 2, backgroundColor: "#D9461E", top: 24 }, bike: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#D43A0B", alignItems: "center", justifyContent: "center", marginTop: 90 }, sheet: { padding: 15, paddingBottom: 18, backgroundColor: COLORS.white, borderTopLeftRadius: 14, borderTopRightRadius: 14 }, sheetHandle: { width: 28, height: 3, backgroundColor: COLORS.line, borderRadius: 2, alignSelf: "center", marginBottom: 12 }, locationRow: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 14 }, locationBadge: { width: 29, height: 29, borderRadius: 15, backgroundColor: "#FFF0E6", alignItems: "center", justifyContent: "center" }, locationCopy: { flex: 1 }, locationName: { fontSize: 9, fontWeight: "800", color: COLORS.ink }, locationAddress: { fontSize: 7, color: COLORS.slate, marginTop: 3 }, arrived: { backgroundColor: "#D43A0B", height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" }, arrivedText: { color: COLORS.white, fontSize: 9, fontWeight: "800" } });
 
 export default MapNavigationScreen;

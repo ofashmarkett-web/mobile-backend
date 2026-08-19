@@ -2,12 +2,13 @@ import React from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../theme/colors";
+import { resolveMediaUrl } from "../../config/api";
 
 const ProductThumb = ({ uri, size = 52, radius = 10 }) => {
   if (uri) {
     return (
       <Image
-        source={{ uri }}
+        source={{ uri: resolveMediaUrl(uri) }}
         style={{ width: size, height: size, borderRadius: radius, backgroundColor: COLORS.surface }}
       />
     );

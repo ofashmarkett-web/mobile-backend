@@ -7,6 +7,9 @@ import MapNavigationScreen from "../screens/rider/MapNavigationScreen";
 import RiderDashboard from "../screens/rider/RiderDashboard";
 import RiderOnboardingStepScreen from "../screens/rider/RiderOnboardingStepScreen";
 import SetRatesScreen from "../screens/rider/SetRatesScreen";
+import RiderProfileScreen from "../screens/rider/RiderProfileScreen";
+import RiderPersonalInfoScreen from "../screens/rider/RiderPersonalInfoScreen";
+import RiderNotificationsScreen from "../screens/rider/RiderNotificationsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +46,9 @@ const RiderNavigator = () => (
     <Stack.Screen name="MapNavigation" component={MapNavigationScreen} />
     <Stack.Screen name="DeliveryVerification" component={DeliveryVerificationScreen} />
     <Stack.Screen name="SetRates" component={SetRatesScreen} />
+    <Stack.Screen name="RiderProfile" component={RiderProfileScreen} />
+    <Stack.Screen name="RiderPersonalInfo" component={RiderPersonalInfoScreen} />
+    <Stack.Screen name="RiderNotifications" component={RiderNotificationsScreen} />
   </Stack.Navigator>
 );
 

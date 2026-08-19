@@ -83,6 +83,14 @@ const VendorNotificationsScreen = ({ navigation }) => {
       <View style={styles.header}>
         <BackCircle onPress={() => navigation.goBack()} style={styles.back} />
         <Text style={styles.headerTitle}>NOTIFICATIONS</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Refresh vendor notifications"
+          onPress={() => feed.refresh()}
+          style={styles.markRead}
+        >
+          <Ionicons name="refresh-outline" size={16} color={COLORS.teal} />
+        </TouchableOpacity>
       </View>
 
       {feed.loading ? (
@@ -143,6 +151,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: COLORS.ink,
   },
+  markRead: {
+    position: "absolute",
+    right: 16,
+    padding: 6,
+  },
   scroll: {
     padding: 16,
     paddingBottom: 32,
@@ -153,25 +166,22 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   card: {
-    borderWidth: 1,
-    borderColor: COLORS.line,
-    borderRadius: 14,
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 13,
+    gap: 10,
+    paddingVertical: 14,
   },
   rowDivider: {
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 31,
+    height: 31,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -179,15 +189,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontSize: 13.5,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     color: COLORS.ink,
   },
   rowBody: {
-    fontSize: 12,
+    fontSize: 9,
     color: COLORS.muted,
     marginTop: 2,
-    lineHeight: 16,
+    lineHeight: 13,
   },
   rowTime: {
     fontSize: 10.5,

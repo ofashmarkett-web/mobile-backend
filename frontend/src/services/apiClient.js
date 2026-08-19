@@ -179,6 +179,9 @@ export const buyerApi = {
   placeOrder: (token, payload) => request("/orders", { method: "POST", token, body: payload }),
   confirmDelivery: (token, id) => request(`/orders/${id}/confirm`, { method: "POST", token }),
   recordView: (id) => request(`/products/${id}/view`, { method: "POST" }).catch(() => {}),
+  favorites: (token) => request("/buyers/favorites", { token }),
+  favoriteVendor: (token, vendorId) => request(`/buyers/favorites/${vendorId}`, { method: "POST", token }),
+  unfavoriteVendor: (token, vendorId) => request(`/buyers/favorites/${vendorId}`, { method: "DELETE", token }),
 };
 
 export const disputeApi = {
@@ -195,6 +198,14 @@ export const reviewApi = {
 
 export const uploadApi = {
   images: (token, files) => uploadRequest("/uploads", { token, files }),
+};
+
+export const notificationApi = {
+  list: (token) => request("/notifications", { token }),
+  registerDevice: (token, payload) => request("/notifications/devices", { method: "POST", token, body: payload }),
+  markRead: (token, id) => request(`/notifications/${id}/read`, { method: "POST", token }),
+  markAllRead: (token) => request("/notifications/read-all", { method: "POST", token }),
+  updateRiderLocation: (token, payload) => request("/notifications/rider-location", { method: "POST", token, body: payload }),
 };
 
 export default request;
