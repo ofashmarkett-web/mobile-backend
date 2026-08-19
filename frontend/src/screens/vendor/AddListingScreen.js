@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -111,8 +111,10 @@ const UploadBox = ({ label, asset, onPick, onClear }) => (
 
 const FieldLabel = ({ children }) => <Text style={styles.fieldLabel}>{children}</Text>;
 
-const AddListingScreen = ({ navigation }) => {
+const AddListingScreen = ({ navigation, route }) => {
   const token = useUserStore((state) => state.token);
+  const editingProductId = route.params?.productId;
+  const editing = Boolean(editingProductId);
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -135,6 +137,18 @@ const AddListingScreen = ({ navigation }) => {
   const [styleTags, setStyleTags] = useState([]);
   const [colours, setColours] = useState([]);
   const [customTags, setCustomTags] = useState("");
+  const [existingImages, setExistingImages] = useState([]);
+
+  useEffect(() => {
+    if (!editingProductId) return;
+    productApi.get(token, editingProductId).then(({ product }) => {
+      setName(product.name || ""); setCondition(product.condition || null); setExistingImages(product.images || []);
+      setFrontImage(product.images?.[0] ? { uri: product.images[0], existing: true } : null);
+      setBackImage(product.images?.[1] ? { uri: product.images[1], existing: true } : null);
+      setUsePriceRange(Boolean(product.usePriceRange)); setBasePrice(String(product.basePrice || "")); setPriceMin(String(product.priceMin || "")); setPriceMax(String(product.priceMax || ""));
+      setSizes(product.sizes || []); setStockQuantity(product.stockQuantity || 0); setOccasions(product.occasionTags || []); setStyleTags(product.styleTags || []); setColours(product.colours || []); setCustomTags((product.customTags || []).join(", "));
+    }).catch((error) => Alert.alert("Could not load listing", error.message));
+  }, [editingProductId, token]);
 
   const toggleIn = (list, setList) => (value) =>
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
@@ -147,13 +161,18 @@ const AddListingScreen = ({ navigation }) => {
   const submit = async () => {
     setSaving(true);
     try {
-      const files = [frontImage, backImage].filter(Boolean);
-      const uploaded = await uploadApi.images(token, files);
+    const files = [frontImage, backImage].filter((file) => file && !file.existing);
+    const uploaded = files.length ? await uploadApi.images(token, files) : { urls: [] };
+    const uploadedUrls = [...(uploaded.urls || [])];
+    const imageUrls = [
+      frontImage?.existing ? frontImage.uri : uploadedUrls.shift(),
+      backImage?.existing ? backImage.uri : uploadedUrls.shift(),
+    ].filter(Boolean);
 
-      await productApi.create(token, {
+      const payload = {
         name: name.trim(),
         condition,
-        images: uploaded.urls,
+        images: imageUrls,
         usePriceRange,
         basePrice: Number(basePrice) || undefined,
         priceMin: usePriceRange ? Number(priceMin) : undefined,
@@ -167,11 +186,13 @@ const AddListingScreen = ({ navigation }) => {
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
-      });
+      };
+      if (editing) await productApi.update(token, editingProductId, payload);
+      else await productApi.create(token, payload);
 
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Could not publish listing", error.message);
+      Alert.alert(editing ? "Could not update listing" : "Could not publish listing", error.message);
     } finally {
       setSaving(false);
     }
@@ -363,7 +384,7 @@ const AddListingScreen = ({ navigation }) => {
                 <Ionicons name="chevron-back" size={22} color={COLORS.ink} />
               </TouchableOpacity>
             ) : null}
-            <Text style={styles.title}>{current.title}</Text>
+            <Text style={styles.title}>{editing ? `Edit listing · ${current.title}` : current.title}</Text>
           </View>
 
           <ScrollView
@@ -376,7 +397,7 @@ const AddListingScreen = ({ navigation }) => {
           </ScrollView>
 
           <PrimaryButton
-            label={isLast ? "Publish listing" : "Continue"}
+            label={isLast ? (editing ? "Save changes" : "Publish listing") : "Continue"}
             disabled={!current.valid}
             loading={saving}
             onPress={() => (isLast ? submit() : setStep(step + 1))}

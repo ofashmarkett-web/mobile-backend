@@ -103,6 +103,9 @@ const VendorProductDetailScreen = ({ navigation, route }) => {
           <TouchableOpacity style={[styles.heroButton, { right: 14 }]} onPress={shareProduct}>
             <Ionicons name="share-social-outline" size={18} color={COLORS.ink} />
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.heroButton, { right: 58 }]} onPress={() => navigation.navigate("AddListing", { productId: product.id })}>
+            <Ionicons name="create-outline" size={18} color={COLORS.ink} />
+          </TouchableOpacity>
 
           {images.length > 0 ? (
             <View style={styles.pageBadge}>
